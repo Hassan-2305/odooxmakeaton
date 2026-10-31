@@ -167,7 +167,7 @@ export const discountRules = pgTable(
     validTo: date("valid_to", { mode: "string" }),
     usageLimit: integer("usage_limit"),
     usedCount: integer("used_count").notNull().default(0),
-    scope: discountScope("scope").notNull().default("order"),
+    scope: discountScope("scope").notNull().default("subscription"),
     productId: uuid("product_id").references(() => products.id, { onDelete: "restrict" }),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps(),
@@ -175,7 +175,7 @@ export const discountRules = pgTable(
   (t) => [
     index("discount_rules_product_id_idx").on(t.productId),
     check("discount_rules_value_chk", sql`${t.value} > 0`),
-    check("discount_rules_percentage_chk", sql`${t.type} <> 'percentage' or ${t.value} <= 10000`),
+    check("discount_rules_percentage_chk", sql`${t.type} <> 'percent' or ${t.value} <= 10000`),
     check("discount_rules_min_amount_chk", sql`${t.minAmountPaise} >= 0`),
     check("discount_rules_min_qty_chk", sql`${t.minQty} >= 1`),
     check(

@@ -147,14 +147,15 @@ const discountRuleFields = z.object({
     .regex(/^[A-Z0-9_-]{3,32}$/, "Use 3-32 letters, digits, - or _")
     .nullish(),
   type: discountTypeSchema,
-  /** percentage: basis points (1000 = 10%); fixed: paise. */
+  /** percent: basis points (1000 = 10%); fixed: paise. */
   value: positivePaiseSchema,
   minAmountPaise: paiseSchema.default(0),
   minQty: quantitySchema.default(1),
   validFrom: isoDateSchema.nullish(),
   validTo: isoDateSchema.nullish(),
   usageLimit: z.number().int().min(1).nullish(),
-  scope: discountScopeSchema.default("order"),
+  /** subscription: the whole invoice; product: only lines for productId. */
+  scope: discountScopeSchema.default("subscription"),
   productId: idSchema.nullish(),
   isActive: z.boolean().default(true),
 });
@@ -162,14 +163,14 @@ const discountRuleFields = z.object({
 type DiscountRuleShape = Partial<z.infer<typeof discountRuleFields>>;
 
 function checkDiscountRule(rule: DiscountRuleShape, ctx: z.RefinementCtx) {
-  if (rule.type === "percentage" && rule.value !== undefined && rule.value > 10_000) {
+  if (rule.type === "percent" && rule.value !== undefined && rule.value > 10_000) {
     ctx.addIssue({ code: "custom", path: ["value"], message: "Percentage cannot exceed 100%" });
   }
   if (rule.scope === "product" && !rule.productId) {
     ctx.addIssue({ code: "custom", path: ["productId"], message: "Pick a product for a product discount" });
   }
-  if (rule.scope === "order" && rule.productId) {
-    ctx.addIssue({ code: "custom", path: ["productId"], message: "Order discounts cannot target a product" });
+  if (rule.scope === "subscription" && rule.productId) {
+    ctx.addIssue({ code: "custom", path: ["productId"], message: "Subscription discounts cannot target a product" });
   }
   checkDateOrder(ctx, rule.validFrom, rule.validTo, "validTo", { allowEqual: true });
 }
@@ -182,6 +183,20 @@ export const updateDiscountRuleSchema = toPatchSchema(discountRuleFields)
 export type UpdateDiscountRuleInput = z.infer<typeof updateDiscountRuleSchema>;
 
 // List queries
+
+export const discountRuleListQuerySchema = createListQuerySchema({
+  sortFields: ["name", "validFrom", "validTo", "createdAt"],
+  defaultSort: [{ field: "createdAt", direction: "desc" }],
+  filters: {
+    q: z.string().trim().min(1).max(100).optional(),
+    isActive: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+    scope: discountScopeSchema.optional(),
+    productId: idSchema.optional(),
+    /** Only rules valid on this date that still have uses left. */
+    usableOn: isoDateSchema.optional(),
+  },
+});
+export type DiscountRuleListQuery = z.infer<typeof discountRuleListQuerySchema>;
 
 const booleanQuery = z.enum(["true", "false"]).transform((v) => v === "true");
 const searchQuery = z.string().trim().min(1).max(100);
@@ -292,6 +307,26 @@ export interface Plan {
   closableEarly: boolean;
   pausable: boolean;
   renewable: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface DiscountRule {
+  id: string;
+  name: string;
+  code: string | null;
+  type: "percent" | "fixed";
+  /** percent: basis points; fixed: paise. */
+  value: number;
+  minAmountPaise: number;
+  minQty: number;
+  validFrom: string | null;
+  validTo: string | null;
+  usageLimit: number | null;
+  usedCount: number;
+  scope: "subscription" | "product";
+  productId: string | null;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

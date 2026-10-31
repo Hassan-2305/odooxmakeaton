@@ -26,11 +26,11 @@ export const planIntervalInputSchema = z.preprocess(
   planIntervalSchema,
 );
 
-export const DISCOUNT_TYPES = ["percentage", "fixed"] as const;
+export const DISCOUNT_TYPES = ["percent", "fixed"] as const;
 export const discountTypeSchema = z.enum(DISCOUNT_TYPES);
 export type DiscountType = z.infer<typeof discountTypeSchema>;
 
-export const DISCOUNT_SCOPES = ["order", "product"] as const;
+export const DISCOUNT_SCOPES = ["subscription", "product"] as const;
 export const discountScopeSchema = z.enum(DISCOUNT_SCOPES);
 export type DiscountScope = z.infer<typeof discountScopeSchema>;
 

@@ -15,6 +15,7 @@ import { createAuditRouter } from "./audit.routes.js";
 import { type AuthRateLimit, createAuthRouter } from "./auth.routes.js";
 import { createPlansRouter, createProductsRouter, createTaxesRouter, createVariantsRouter } from "./catalog.routes.js";
 import { createCustomersRouter } from "./customers.routes.js";
+import { createDiscountsRouter } from "./discounts.routes.js";
 import { createEventsRouter } from "./events.routes.js";
 import { createHealthRouter } from "./health.routes.js";
 import { createIntegrityRouter } from "./integrity.routes.js";
@@ -76,4 +77,5 @@ function mountDomainRoutes(api: Router, domain: DomainServices) {
   api.use("/variants", createVariantsRouter(domain));
   api.use("/taxes", createTaxesRouter(domain));
   api.use("/plans", createPlansRouter(domain));
+  api.use("/discounts", createDiscountsRouter(domain));
 }

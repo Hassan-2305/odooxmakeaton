@@ -22,6 +22,13 @@
       "when": 1793431568604,
       "tag": "0002_catalog_taxes_plans",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1793431982982,
+      "tag": "0003_discount_enums",
+      "breakpoints": true
     }
   ]
 }
