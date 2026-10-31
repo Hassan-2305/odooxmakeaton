@@ -331,12 +331,7 @@ fresh Postgres 16 on every pull request.
 
 ## Team
 
-| Area | Owner |
-| ---- | ----- |
-| Database schema, migrations, seed and demo dataset | _TBD_ |
-| API: auth, catalog, subscriptions, billing, invoices, payments | _TBD_ |
-| Revenue integrity and reports | _TBD_ |
-| Web app: staff screens, dashboard and customer portal | _TBD_ |
-| Testing, CI and docs | _TBD_ |
+Built solo by Mohammed Hassan during the hackathon. Every change went through a feature
+branch, a pull request and CI, the same workflow a team would use.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch and PR rules.
