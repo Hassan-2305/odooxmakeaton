@@ -3,6 +3,7 @@ import { Navigate, Outlet, useLocation, useSearchParams } from "react-router";
 import { ErrorState } from "@/components/error-state";
 import { FullPageSpinner } from "@/layouts/shell-parts";
 import { homePathFor, useMe } from "@/lib/auth";
+import { LandingPage } from "@/pages/landing/landing-page";
 
 /**
  * Renders child routes only for a signed-in user whose role (from /api/auth/me) is in
@@ -41,9 +42,9 @@ function safeNext(next: string | null): string | null {
   return next && next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\") ? next : null;
 }
 
-/** "/" → the user's home, or /login. */
+/** "/" → the user's home, or the public landing page. */
 export function HomeRedirect() {
   const me = useMe();
   if (me.isPending) return <FullPageSpinner />;
-  return <Navigate to={me.data ? homePathFor(me.data.role) : "/login"} replace />;
+  return me.data ? <Navigate to={homePathFor(me.data.role)} replace /> : <LandingPage />;
 }

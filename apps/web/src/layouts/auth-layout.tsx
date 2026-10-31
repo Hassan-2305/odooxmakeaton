@@ -13,7 +13,7 @@ export function AuthLayout() {
       <ContourArt variant="hero" className="absolute inset-0 -z-10 size-full text-white/[0.07]" />
 
       <div className="mx-auto flex min-h-svh max-w-6xl flex-col px-6 py-8 sm:px-10">
-        <Brand to="/login" className="text-white" />
+        <Brand to="/" className="text-white" />
 
         <div className="grid flex-1 items-center gap-16 py-12 lg:grid-cols-[1fr_26rem]">
           <section className="hidden max-w-lg lg:block">
