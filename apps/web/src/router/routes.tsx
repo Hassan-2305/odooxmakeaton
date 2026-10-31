@@ -11,6 +11,7 @@ import { ResetPasswordPage } from "@/pages/auth/reset-password-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
 import { DashboardPage } from "@/pages/dashboard/dashboard-page";
+import { IntegrityPage } from "@/pages/integrity/integrity-page";
 import { RenewalsPage } from "@/pages/renewals/renewals-page";
 import { AuditPage } from "@/pages/settings/audit-page";
 import { GuestOnly, HomeRedirect, RequireRole } from "./guards";
@@ -19,6 +20,7 @@ import { GuestOnly, HomeRedirect, RequireRole } from "./guards";
 const SCREENS: Record<string, ReactNode> = {
   "/dashboard": <DashboardPage />,
   "/renewals": <RenewalsPage />,
+  "/revenue-integrity": <IntegrityPage />,
   "/settings/audit": <AuditPage />,
 };
 
