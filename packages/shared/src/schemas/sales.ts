@@ -6,6 +6,7 @@ import {
   quantitySchema,
   toPatchSchema,
 } from "./common.js";
+import { createListQuerySchema } from "./list-query.js";
 
 export const templateLineSchema = z.object({
   productId: idSchema,
@@ -28,3 +29,36 @@ export type CreateQuotationTemplateInput = z.infer<typeof createQuotationTemplat
 
 export const updateQuotationTemplateSchema = toPatchSchema(createQuotationTemplateSchema);
 export type UpdateQuotationTemplateInput = z.infer<typeof updateQuotationTemplateSchema>;
+
+export const quotationTemplateListQuerySchema = createListQuerySchema({
+  sortFields: ["name", "validityDays", "createdAt"],
+  defaultSort: [{ field: "name", direction: "asc" }],
+  filters: {
+    q: z.string().trim().min(1).max(100).optional(),
+    isActive: z.enum(["true", "false"]).transform((v) => v === "true").optional(),
+  },
+});
+export type QuotationTemplateListQuery = z.infer<typeof quotationTemplateListQuerySchema>;
+
+export interface QuotationTemplateLine {
+  id: string;
+  productId: string;
+  productName: string;
+  variantId: string | null;
+  variantName: string | null;
+  description: string | null;
+  quantity: number;
+  sortOrder: number;
+}
+
+export interface QuotationTemplate {
+  id: string;
+  name: string;
+  validityDays: number;
+  recurringPlanId: string | null;
+  notes: string | null;
+  isActive: boolean;
+  lines: QuotationTemplateLine[];
+  createdAt: string;
+  updatedAt: string;
+}

@@ -6,7 +6,12 @@ import { silentLogger } from "../lib/logger.js";
 import { errorHandler } from "../middleware/error-handler.js";
 import { scopeToCustomer } from "../middleware/scope.js";
 import type { DbOrTx } from "../repositories/audit.repository.js";
+import type { Db } from "../db/client.js";
+import { settings } from "../db/schema/index.js";
+import { createInvoicesRepository } from "../repositories/invoices.repository.js";
 import { createPortalRepository } from "../repositories/portal.repository.js";
+import { createSettingsRepository } from "../repositories/settings.repository.js";
+import { createInvoicePdf } from "../services/invoice-actions.service.js";
 import { createPortalService } from "../services/portal.service.js";
 import { closeTestDb, dbAvailable, fixtures, inRollback } from "../test/db.js";
 import { signInAs } from "../test/sign-in.js";
@@ -81,7 +86,13 @@ describe("GET /api/portal/profile", () => {
 describe.skipIf(!dbAvailable)("portal data isolation (Postgres)", () => {
   /** Two customers with a subscription, invoices and a payment each; A and B signed in. */
   async function setup(tx: DbOrTx) {
-    const app = createTestApp({ portalService: createPortalService({ repo: createPortalRepository(tx) }) });
+    await tx.insert(settings).values({ id: 1 }).onConflictDoNothing();
+    // The real invoice PDF function, reading through the same rolled-back transaction.
+    const invoicePdf = createInvoicePdf({
+      invoices: createInvoicesRepository(tx as unknown as Db),
+      settings: createSettingsRepository(tx as unknown as Db),
+    });
+    const app = createTestApp({ portalService: createPortalService({ repo: createPortalRepository(tx), invoicePdf }) });
     const f = fixtures(tx);
     const plan = await f.plan("month");
 
@@ -155,8 +166,18 @@ describe.skipIf(!dbAvailable)("portal data isolation (Postgres)", () => {
       const own = await a.agent.get(`/api/portal/invoices/${a.invoice.id}`);
       expect(own.status).toBe(200);
       expect(own.body.invoice).toMatchObject({ id: a.invoice.id, balancePaise: 6000, lines: [] });
-      // The owner reaches the PDF stub.
-      expect((await a.agent.get(`/api/portal/invoices/${a.invoice.id}/pdf`)).status).toBe(501);
+      // The owner gets the rendered invoice PDF.
+      const pdf = await a.agent
+        .get(`/api/portal/invoices/${a.invoice.id}/pdf`)
+        .buffer(true)
+        .parse((r, cb) => {
+          const chunks: Buffer[] = [];
+          r.on("data", (c: Buffer) => chunks.push(c));
+          r.on("end", () => cb(null, Buffer.concat(chunks)));
+        });
+      expect(pdf.status).toBe(200);
+      expect(pdf.headers["content-type"]).toBe("application/pdf");
+      expect((pdf.body as Buffer).subarray(0, 5).toString()).toBe("%PDF-");
     }));
 
   it("stores a cancel request in the audit log, only for the customer's own subscription", () =>

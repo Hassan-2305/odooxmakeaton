@@ -29,11 +29,31 @@ export const products = pgTable(
   (t) => [check("products_base_price_chk", sql`${t.basePricePaise} >= 0`)],
 );
 
-export const productAttributes = pgTable("product_attributes", {
-  id: id(),
-  name: text("name").notNull().unique("product_attributes_name_unique"),
-  createdAt: utc("created_at").notNull().defaultNow(),
-});
+/** Global attributes have no product; product-specific ones are only offered to that product. */
+export const productAttributes = pgTable(
+  "product_attributes",
+  {
+    id: id(),
+    productId: uuid("product_id").references(() => products.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    createdAt: utc("created_at").notNull().defaultNow(),
+  },
+  (t) => [unique("product_attributes_product_name_unique").on(t.productId, t.name).nullsNotDistinct()],
+);
+
+/** Default taxes for a product, copied onto subscription lines when they are created. */
+export const productTaxes = pgTable(
+  "product_taxes",
+  {
+    productId: uuid("product_id")
+      .notNull()
+      .references(() => products.id, { onDelete: "cascade" }),
+    taxId: uuid("tax_id")
+      .notNull()
+      .references(() => taxes.id, { onDelete: "cascade" }),
+  },
+  (t) => [primaryKey({ columns: [t.productId, t.taxId] })],
+);
 
 export const attributeValues = pgTable(
   "attribute_values",
@@ -90,6 +110,7 @@ export const taxes = pgTable(
     inclusive: boolean("inclusive").notNull().default(false),
     effectiveFrom: date("effective_from", { mode: "string" }).notNull(),
     effectiveTo: date("effective_to", { mode: "string" }),
+    isActive: boolean("is_active").notNull().default(true),
     ...timestamps(),
   },
   (t) => [
@@ -106,6 +127,8 @@ export const recurringPlans = pgTable(
   {
     id: id(),
     name: text("name").notNull(),
+    // Plan list price per billing period, in paise.
+    pricePaise: paise("price_paise").notNull().default(0),
     interval: planInterval("interval").notNull(),
     intervalCount: integer("interval_count").notNull().default(1),
     minQuantity: integer("min_quantity").notNull().default(1),
@@ -119,6 +142,7 @@ export const recurringPlans = pgTable(
     ...timestamps(),
   },
   (t) => [
+    check("recurring_plans_price_chk", sql`${t.pricePaise} >= 0`),
     check("recurring_plans_interval_count_chk", sql`${t.intervalCount} >= 1`),
     check("recurring_plans_min_quantity_chk", sql`${t.minQuantity} >= 1`),
     check(
@@ -143,7 +167,7 @@ export const discountRules = pgTable(
     validTo: date("valid_to", { mode: "string" }),
     usageLimit: integer("usage_limit"),
     usedCount: integer("used_count").notNull().default(0),
-    scope: discountScope("scope").notNull().default("order"),
+    scope: discountScope("scope").notNull().default("subscription"),
     productId: uuid("product_id").references(() => products.id, { onDelete: "restrict" }),
     isActive: boolean("is_active").notNull().default(true),
     ...timestamps(),
@@ -151,7 +175,7 @@ export const discountRules = pgTable(
   (t) => [
     index("discount_rules_product_id_idx").on(t.productId),
     check("discount_rules_value_chk", sql`${t.value} > 0`),
-    check("discount_rules_percentage_chk", sql`${t.type} <> 'percentage' or ${t.value} <= 10000`),
+    check("discount_rules_percentage_chk", sql`${t.type} <> 'percent' or ${t.value} <= 10000`),
     check("discount_rules_min_amount_chk", sql`${t.minAmountPaise} >= 0`),
     check("discount_rules_min_qty_chk", sql`${t.minQty} >= 1`),
     check(

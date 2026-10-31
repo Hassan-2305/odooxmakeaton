@@ -14,17 +14,30 @@ export const PLAN_INTERVALS = ["day", "week", "month", "year"] as const;
 export const planIntervalSchema = z.enum(PLAN_INTERVALS);
 export type PlanInterval = z.infer<typeof planIntervalSchema>;
 
-export const DISCOUNT_TYPES = ["percentage", "fixed"] as const;
+/** Odoo-style names accepted on input and stored as the short form. */
+const PLAN_INTERVAL_ALIASES: Record<string, PlanInterval> = {
+  daily: "day",
+  weekly: "week",
+  monthly: "month",
+  yearly: "year",
+};
+export const planIntervalInputSchema = z.preprocess(
+  (value) => (typeof value === "string" ? (PLAN_INTERVAL_ALIASES[value] ?? value) : value),
+  planIntervalSchema,
+);
+
+export const DISCOUNT_TYPES = ["percent", "fixed"] as const;
 export const discountTypeSchema = z.enum(DISCOUNT_TYPES);
 export type DiscountType = z.infer<typeof discountTypeSchema>;
 
-export const DISCOUNT_SCOPES = ["order", "product"] as const;
+export const DISCOUNT_SCOPES = ["subscription", "product"] as const;
 export const discountScopeSchema = z.enum(DISCOUNT_SCOPES);
 export type DiscountScope = z.infer<typeof discountScopeSchema>;
 
 export const SUBSCRIPTION_STATUSES = [
   "draft",
   "quotation",
+  "confirmed",
   "active",
   "paused",
   "closed",
@@ -41,7 +54,7 @@ export const BILLING_RUN_STATUSES = ["running", "completed", "failed"] as const;
 export const billingRunStatusSchema = z.enum(BILLING_RUN_STATUSES);
 export type BillingRunStatus = z.infer<typeof billingRunStatusSchema>;
 
-export const BILLING_RUN_ITEM_OUTCOMES = ["invoiced", "skipped", "failed"] as const;
+export const BILLING_RUN_ITEM_OUTCOMES = ["created", "already_billed", "skipped", "failed"] as const;
 export const billingRunItemOutcomeSchema = z.enum(BILLING_RUN_ITEM_OUTCOMES);
 export type BillingRunItemOutcome = z.infer<typeof billingRunItemOutcomeSchema>;
 

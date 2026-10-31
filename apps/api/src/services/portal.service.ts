@@ -10,7 +10,13 @@ const REQUESTABLE = new Set(["quotation", "active", "paused"]);
  * its first argument; records of other customers are reported as not found (404),
  * so their existence isn't revealed.
  */
-export function createPortalService({ repo }: { repo: PortalRepository }) {
+interface Deps {
+  repo: PortalRepository;
+  /** The back-office invoice PDF renderer. Called only after ownership is checked. */
+  invoicePdf?: (invoiceId: string) => Promise<{ buffer: Buffer; filename: string }>;
+}
+
+export function createPortalService({ repo, invoicePdf }: Deps) {
   async function ownInvoice(customerId: string, id: string) {
     const invoice = await repo.findInvoice(customerId, id);
     if (!invoice) throw new NotFoundError("Invoice");
@@ -23,10 +29,11 @@ export function createPortalService({ repo }: { repo: PortalRepository }) {
     getInvoice: ownInvoice,
     listPayments: (customerId: string) => repo.listPayments(customerId),
 
-    /** Ownership is checked first, so another customer's invoice is a 404, not a 501. */
-    async invoicePdf(customerId: string, id: string): Promise<never> {
+    /** Ownership is checked first, so another customer's (or a draft) invoice is a 404. */
+    async invoicePdf(customerId: string, id: string): Promise<{ buffer: Buffer; filename: string }> {
       await ownInvoice(customerId, id);
-      throw new AppError(501, "not_implemented", "Invoice PDFs aren't available yet");
+      if (!invoicePdf) throw new AppError(501, "not_implemented", "Invoice PDFs aren't available yet");
+      return invoicePdf(id);
     },
 
     async createRequest(actorUserId: string, customerId: string, input: PortalRequestInput) {

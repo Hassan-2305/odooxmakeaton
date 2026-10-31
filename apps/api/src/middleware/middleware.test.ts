@@ -49,7 +49,7 @@ describe("validate()", () => {
       .send({ name: "  Pro plan ", basePricePaise: 49900 });
 
     expect(res.status).toBe(201);
-    expect(res.body).toEqual({ name: "Pro plan", basePricePaise: 49900, isActive: true });
+    expect(res.body).toEqual({ name: "Pro plan", basePricePaise: 49900, isActive: true, taxIds: [] });
   });
 
   it("coerces and defaults the query string", async () => {
