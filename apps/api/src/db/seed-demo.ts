@@ -30,7 +30,6 @@ import { createPasswordHasher } from "../lib/password.js";
 import { createAuditRepository, writeAudit } from "../repositories/audit.repository.js";
 import { createBillingRunsRepository } from "../repositories/billing-runs.repository.js";
 import { createCustomersRepository } from "../repositories/customers.repository.js";
-import { createSettingsRepository } from "../repositories/settings.repository.js";
 import { createUsersRepository } from "../repositories/users.repository.js";
 import { createAuditService } from "../services/audit.service.js";
 import { createCustomersService } from "../services/customers.service.js";
@@ -90,7 +89,6 @@ const domain = createDomainServices({
 const customersService = createCustomersService({ customers: createCustomersRepository(db) });
 const users = createUsersRepository(db);
 const runsRepo = createBillingRunsRepository(db);
-const settingsRepo = createSettingsRepository(db);
 
 // Deterministic randomness (mulberry32) so two runs on the same day give the same data.
 let seed = 0x5eed2026;
@@ -123,11 +121,18 @@ const log = (msg: string) => console.log(`[${((performance.now() - startedAt) / 
 
 // ---------------------------------------------------------------------------- reset
 
-const UNIQUE_PERIOD = "invoices_subscription_period_unique";
-
-async function periodConstraintExists() {
-  const [row] = await rows<{ n: number }>(sql`select count(*)::int as n from pg_constraint where conname = ${UNIQUE_PERIOD}`);
-  return row!.n > 0;
+// The unique (subscription_id, period_start) constraint is the double-billing guarantee.
+// This script never alters it; refuse to seed a database where it is missing.
+{
+  const [row] = await rows<{ n: number }>(
+    sql`select count(*)::int as n from pg_constraint where conname = 'invoices_subscription_period_unique'`,
+  );
+  if (row!.n === 0) {
+    throw new Error(
+      "invoices_subscription_period_unique is missing (an older seed:demo --with-faults dropped it). " +
+        "Recreate the database and run db:migrate before seeding.",
+    );
+  }
 }
 
 if (flags.reset) {
@@ -138,17 +143,6 @@ if (flags.reset) {
   await db.execute(sql.raw(`truncate table ${tables.map((t) => `"${t.tablename}"`).join(", ")} restart identity cascade`));
   await db.execute(sql`update settings set next_invoice_seq = 1, next_subscription_seq = 1, next_credit_note_seq = 1`);
   log(`reset: truncated ${tables.length} tables, document counters restarted`);
-}
-
-// A previous --with-faults run drops this constraint to plant a duplicate invoice.
-if (!(await periodConstraintExists())) {
-  const [dup] = await rows<{ n: number }>(sql`
-    select count(*)::int as n from (
-      select 1 from invoices where subscription_id is not null
-      group by subscription_id, period_start having count(*) > 1) d`);
-  if (dup!.n > 0) throw new Error(`Duplicate invoices exist and ${UNIQUE_PERIOD} is missing: rerun with --reset`);
-  await db.execute(sql.raw(`alter table invoices add constraint ${UNIQUE_PERIOD} unique (subscription_id, period_start)`));
-  log(`restored constraint ${UNIQUE_PERIOD}`);
 }
 
 // Base seed (admin, staff, 20 customers, catalog, plans, templates). It skips itself
@@ -519,50 +513,37 @@ if (flags["with-faults"]) {
   await domain.subscriptionService.transition(actor, unbilled.id, { to: "active" });
   setClock(realToday);
 
-  // 2. duplicate_invoice: the schema's unique (subscription_id, period_start) constraint
-  //    makes this impossible, so it is dropped here (demo database only; the next run of
-  //    this script restores it) and an invoice is copied as a second confirmed invoice.
-  console.warn(`WARNING: dropping ${UNIQUE_PERIOD} to plant a duplicate invoice; rerun with --reset to restore it`);
-  await db.transaction(async (tx) => {
-    await tx.execute(sql.raw(`alter table invoices drop constraint ${UNIQUE_PERIOD}`));
-    const [original] = (
-      await tx.execute(sql`
-        select i.id from invoices i where i.status = 'paid' and i.customer_id <> ${demoCustomerId}
-        order by i.issue_date desc, i.id limit 1`)
-    ).rows as { id: string }[];
-    const number = await settingsRepo.nextNumber(tx, "invoice");
-    const [copy] = (
-      await tx.execute(sql`
-        insert into invoices (number, subscription_id, customer_id, billing_run_id, status, currency,
-          period_start, period_end, issue_date, due_date, customer_snapshot, subtotal_paise,
-          discount_total_paise, tax_total_paise, total_paise, amount_paid_paise, confirmed_at)
-        select ${number}, subscription_id, customer_id, billing_run_id, 'confirmed', currency,
-          period_start, period_end, issue_date, due_date, customer_snapshot, subtotal_paise,
-          discount_total_paise, tax_total_paise, total_paise, 0, now()
-        from invoices where id = ${original!.id}
-        returning id`)
-    ).rows as { id: string }[];
-    await tx.execute(sql`
-      with src as (select * from invoice_lines where invoice_id = ${original!.id}),
-      copied as (
-        insert into invoice_lines (invoice_id, kind, subscription_line_id, product_id, variant_id,
-          description, quantity, unit_price_paise, amount_paise, sort_order)
-        select ${copy!.id}, kind, subscription_line_id, product_id, variant_id,
-          description, quantity, unit_price_paise, amount_paise, sort_order from src
-        returning id, sort_order)
-      insert into invoice_line_taxes (invoice_line_id, tax_id, name, rate_bps, inclusive,
-        taxable_amount_paise, tax_amount_paise)
-      select c.id, t.tax_id, t.name, t.rate_bps, t.inclusive, t.taxable_amount_paise, t.tax_amount_paise
-      from invoice_line_taxes t join src s on s.id = t.invoice_line_id join copied c on c.sort_order = s.sort_order`);
+  // 2. duplicate_invoice: a second invoice for the same subscription whose period starts one
+  //    day after a paid invoice's and ends with it. The unique (subscription_id, period_start)
+  //    constraint allows it, so it is built and confirmed through the normal invoice path;
+  //    the integrity scan flags it because the two billing periods overlap.
+  const [original] = await rows<{ id: string; subscription_id: string; period_start: string; period_end: string; issue_date: string }>(sql`
+    select i.id, i.subscription_id, i.period_start::text, i.period_end::text, i.issue_date::text
+    from invoices i
+    where i.status = 'paid' and i.subscription_id is not null and i.customer_id <> ${demoCustomerId}
+    order by i.issue_date desc, i.id limit 1`);
+  if (!original) throw new Error("no paid invoice to duplicate");
+  const [sub] = await rows<{ id: string; customer_id: string; payment_terms_days: number }>(
+    sql`select id, customer_id, payment_terms_days from subscriptions where id = ${original.subscription_id}`,
+  );
+  const dup = await db.transaction(async (tx) => {
+    const built = await domain.invoiceService.build(
+      { id: sub!.id, customerId: sub!.customer_id, paymentTermsDays: sub!.payment_terms_days },
+      { start: addDays(original.period_start, 1), end: original.period_end },
+      tx,
+      { invoiceDate: original.issue_date },
+    );
     await writeAudit(tx, {
       actorUserId: null,
       action: "invoice.created",
       entityType: "invoice",
-      entityId: copy!.id,
+      entityId: built.invoice.id,
       before: null,
-      after: { number, duplicateOf: original!.id, source: "seed:demo planted fault" },
+      after: { number: built.invoice.number, overlapsInvoice: original.id, source: "seed:demo planted fault" },
     });
+    return built.invoice;
   });
+  await domain.invoiceActionsService.confirm(actor, dup.id);
 
   // 3. unallocated_payment: money received with no invoice matched to it.
   await domain.paymentService.create(

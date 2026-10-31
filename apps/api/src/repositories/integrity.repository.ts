@@ -18,8 +18,11 @@ import type { DbOrTx } from "./audit.repository.js";
  *
  *  missing_invoice     active subscription whose next_invoice_date is more than a day
  *                      past and has no non-cancelled invoice for that period.
- *  duplicate_invoice   more than one non-cancelled invoice for a subscription and
- *                      period_start. The earliest is the original; each later one is a finding.
+ *  duplicate_invoice   non-cancelled invoice whose billing period overlaps the period of an
+ *                      earlier non-cancelled invoice for the same subscription (periods are
+ *                      half-open [period_start, period_end), so exact duplicates count too).
+ *                      The earliest overlapping invoice is the original; each later one is a
+ *                      finding, with void_duplicate as the recommended action.
  *  unallocated_payment payment whose allocations add up to less than its amount.
  */
 function candidatesSql(today: string): SQL {
@@ -51,29 +54,41 @@ function candidatesSql(today: string): SQL {
 
     union all
 
-    select 'duplicate_invoice', 'high', 'invoice', d.id, d.customer_id,
-           jsonb_build_object('invoicesForPeriod', 1),
-           jsonb_build_object('invoicesForPeriod', d.n),
-           d.total_paise,
+    select 'duplicate_invoice', 'high', 'invoice', o.id, o.customer_id,
+           jsonb_build_object('overlappingInvoices', 0),
+           jsonb_build_object('overlappingInvoices', o.n),
+           o.total_paise,
            jsonb_build_object(
-             'subscriptionId', d.subscription_id,
-             'periodStart', d.period_start,
-             'invoiceNumber', d.number,
-             'originalInvoiceId', d.original_id,
-             'invoiceIds', d.ids
+             'subscriptionId', o.subscription_id,
+             'recommendedAction', 'void_duplicate',
+             'invoiceId', o.id,
+             'invoiceNumber', o.number,
+             'periodStart', o.period_start,
+             'periodEnd', o.period_end,
+             'originalInvoiceId', o.original_id,
+             'originalInvoiceNumber', o.original_number,
+             'originalPeriodStart', o.original_period_start,
+             'originalPeriodEnd', o.original_period_end,
+             'overlapStart', greatest(o.period_start, o.original_period_start),
+             'overlapEnd', least(o.period_end, o.original_period_end)
            )
     from (
-      select i.id, i.customer_id, i.subscription_id, i.period_start, i.number, i.total_paise,
-             row_number() over w as rn,
-             first_value(i.id) over w as original_id,
-             count(*) over p as n,
-             array_agg(i.id) over p as ids
-      from invoices i
-      where i.subscription_id is not null and i.status <> 'cancelled'
-      window p as (partition by i.subscription_id, i.period_start),
-             w as (partition by i.subscription_id, i.period_start order by i.created_at, i.id)
-    ) d
-    where d.n > 1 and d.rn > 1
+      -- Each invoice d paired with every earlier invoice a whose period intersects d's;
+      -- the earliest such a is the original and n counts all of them.
+      select distinct on (d.id)
+             d.id, d.customer_id, d.subscription_id, d.number, d.period_start, d.period_end, d.total_paise,
+             a.id as original_id, a.number as original_number,
+             a.period_start as original_period_start, a.period_end as original_period_end,
+             count(*) over (partition by d.id) as n
+      from invoices d
+      join invoices a
+        on a.subscription_id = d.subscription_id
+       and a.period_start < d.period_end
+       and d.period_start < a.period_end
+       and (a.created_at, a.id) < (d.created_at, d.id)
+      where d.status <> 'cancelled' and a.status <> 'cancelled'
+      order by d.id, a.created_at, a.id
+    ) o
 
     union all
 

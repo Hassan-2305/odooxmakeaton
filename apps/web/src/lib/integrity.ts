@@ -19,8 +19,8 @@ export const RULE_INFO: Record<FindingRule, { label: string; description: string
   duplicate_invoice: {
     label: "Duplicate invoice",
     description:
-      "More than one non-cancelled invoice for the same subscription and billing period. The earliest is treated as the original.",
-    resolutions: ["Duplicate cancelled", "Credit note issued", "Separate charge, not a duplicate"],
+      "A non-cancelled invoice whose billing period overlaps an earlier non-cancelled invoice for the same subscription, exact duplicates included. The earliest is treated as the original; the recommended action is to void the duplicate.",
+    resolutions: ["void_duplicate", "Credit note issued", "Separate charge, not a duplicate"],
   },
   unallocated_payment: {
     label: "Unallocated payment",
