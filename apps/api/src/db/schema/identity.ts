@@ -72,6 +72,26 @@ export const passwordResets = pgTable(
   ],
 );
 
+/** Login sessions. `id` is the SHA-256 of the cookie token; the raw token is never stored. */
+export const sessions = pgTable(
+  "sessions",
+  {
+    id: text("id").primaryKey(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    userAgent: text("user_agent"),
+    ip: text("ip"),
+    expiresAt: utc("expires_at").notNull(),
+    createdAt: utc("created_at").notNull().defaultNow(),
+  },
+  (t) => [
+    index("sessions_user_id_idx").on(t.userId),
+    index("sessions_expires_at_idx").on(t.expiresAt),
+    check("sessions_expiry_chk", sql`${t.expiresAt} > ${t.createdAt}`),
+  ],
+);
+
 /** Single-row table (id is always 1). Sequence counters are bumped under a row lock. */
 export const settings = pgTable(
   "settings",
