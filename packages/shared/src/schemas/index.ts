@@ -5,6 +5,7 @@ export * from "./list-query.js";
 export * from "./auth.js";
 export * from "./staff.js";
 export * from "./customers.js";
+export * from "./audit.js";
 export * from "./catalog.js";
 export * from "./sales.js";
 export * from "./subscriptions.js";

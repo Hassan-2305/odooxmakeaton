@@ -1,5 +1,6 @@
 import path from "node:path";
 import { z } from "zod";
+import { isTimeZone } from "./lib/time.js";
 
 // Load the repo-root .env for local runs. Variables already set in the
 // environment (e.g. by docker compose) take precedence.
@@ -23,6 +24,8 @@ const envSchema = z.object({
   SMTP_HOST: z.string().min(1).default("localhost"),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
   MAIL_FROM: z.string().min(3).default("Brightloop One <no-reply@brightloop.local>"),
+  /** IANA timezone for calendar-day logic (billing days, date filters). */
+  BUSINESS_TZ: z.string().refine(isTimeZone, "Unknown timezone").default("Asia/Kolkata"),
 });
 
 export const env = envSchema.parse(process.env);

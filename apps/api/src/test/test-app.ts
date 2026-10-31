@@ -3,12 +3,19 @@ import { createEventBus } from "../lib/events.js";
 import { silentLogger } from "../lib/logger.js";
 import { createPasswordHasher } from "../lib/password.js";
 import { createCsrf } from "../middleware/csrf.js";
+import { createAuditService } from "../services/audit.service.js";
 import { createAuthService } from "../services/auth.service.js";
 import { createCustomersService } from "../services/customers.service.js";
 import { createHealthService } from "../services/health.service.js";
 import { createPasswordResetService } from "../services/password-reset.service.js";
 import { createStaffService } from "../services/staff.service.js";
-import { createFakeAuthStore, createFakeClock, createFakeCustomersRepo, createFakeMailer } from "./fakes.js";
+import {
+  createFakeAuditRepo,
+  createFakeAuthStore,
+  createFakeClock,
+  createFakeCustomersRepo,
+  createFakeMailer,
+} from "./fakes.js";
 
 export const TEST_SECRET = "test-secret-that-is-at-least-32-characters";
 
@@ -37,6 +44,8 @@ export function createTestApp(overrides: Partial<AppDeps> = {}) {
     now: clock.now,
   });
   const customers = createFakeCustomersRepo();
+  const auditRepo = createFakeAuditRepo(store);
+  const auditService = createAuditService({ repo: auditRepo.repo, timezone: "Asia/Kolkata" });
 
   const app = createApp({
     logger: silentLogger,
@@ -48,9 +57,10 @@ export function createTestApp(overrides: Partial<AppDeps> = {}) {
     passwordResetService,
     staffService: createStaffService({ users: store.usersRepo, hasher: testHasher }),
     customersService: createCustomersService({ customers: customers.repo }),
+    auditService,
     authRateLimit: false,
     ...overrides,
   });
 
-  return { app, store, authService, passwordResetService, clock, mail, customers };
+  return { app, store, authService, passwordResetService, auditService, auditRepo, clock, mail, customers };
 }

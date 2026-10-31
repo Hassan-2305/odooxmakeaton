@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
-import type { AuthUser, Customer, CustomerListQuery, UserRole } from "@brightloop/shared";
+import type { AuditListQuery, AuthUser, Customer, CustomerListQuery, UserRole } from "@brightloop/shared";
 import { paginate } from "../lib/paginate.js";
-import type { AuditEntry } from "../repositories/audit.repository.js";
+import { type AuditEntry, type AuditRepository, redact } from "../repositories/audit.repository.js";
 import type { CustomersRepository } from "../repositories/customers.repository.js";
 import type { MailMessage, Mailer } from "../lib/mailer.js";
 import type { PasswordResetsRepository } from "../repositories/password-resets.repository.js";
@@ -223,4 +223,52 @@ export function createFakeCustomersRepo() {
   };
 
   return { repo, rows, referenced };
+}
+
+/**
+ * Audit repository over the fake store's `audit` array. Records each list query so
+ * tests can check what reached the repository; SQL-only filters (dates) are ignored.
+ */
+export function createFakeAuditRepo(store: ReturnType<typeof createFakeAuthStore>) {
+  const queries: { query: AuditListQuery; timezone: string }[] = [];
+  const repo: Pick<AuditRepository, "write" | "list"> = {
+    async write(entry) {
+      store.audit.push({
+        ...entry,
+        before: redact(entry.before ?? null),
+        after: redact(entry.after ?? null),
+      });
+    },
+    async list(query, timezone) {
+      queries.push({ query, timezone });
+      const entries = store.audit
+        .map((e, i) => ({ ...e, id: i + 1 }))
+        .filter(
+          (e) =>
+            (!query.entityType || e.entityType === query.entityType) &&
+            (!query.entityId || e.entityId === query.entityId) &&
+            (!query.actorUserId || e.actorUserId === query.actorUserId) &&
+            (!query.action ||
+              (query.action.endsWith(".") ? e.action.startsWith(query.action) : e.action === query.action)),
+        )
+        .reverse();
+      return paginate(query, async ({ limit, offset }) => ({
+        rows: entries.slice(offset, offset + limit).map((e) => {
+          const actor = e.actorUserId ? store.users.get(e.actorUserId) : undefined;
+          return {
+            id: e.id,
+            actor: actor ? { id: actor.id, email: actor.email, name: actor.name } : null,
+            action: e.action,
+            entityType: e.entityType,
+            entityId: e.entityId,
+            before: e.before ?? null,
+            after: e.after ?? null,
+            createdAt: new Date(Date.UTC(2026, 10, 1) + e.id * 1000).toISOString(),
+          };
+        }),
+        total: entries.length,
+      }));
+    },
+  };
+  return { repo, queries };
 }

@@ -1,15 +1,18 @@
 import { Router } from "express";
 import type { EventBus } from "../lib/events.js";
 import type { Csrf } from "../middleware/csrf.js";
+import type { AuditService } from "../services/audit.service.js";
 import type { AuthService } from "../services/auth.service.js";
 import type { CustomersService } from "../services/customers.service.js";
 import type { HealthService } from "../services/health.service.js";
 import type { PasswordResetService } from "../services/password-reset.service.js";
 import type { StaffService } from "../services/staff.service.js";
+import { createAuditRouter } from "./audit.routes.js";
 import { type AuthRateLimit, createAuthRouter } from "./auth.routes.js";
 import { createCustomersRouter } from "./customers.routes.js";
 import { createEventsRouter } from "./events.routes.js";
 import { createHealthRouter } from "./health.routes.js";
+import { createPortalRouter } from "./portal.routes.js";
 import { createStaffRouter } from "./staff.routes.js";
 
 export interface RouteDeps {
@@ -18,6 +21,7 @@ export interface RouteDeps {
   passwordResetService: PasswordResetService;
   staffService: StaffService;
   customersService: CustomersService;
+  auditService: AuditService;
   eventBus: EventBus;
   csrf: Csrf;
   secureCookies: boolean;
@@ -44,6 +48,8 @@ export function createApiRouter(deps: RouteDeps) {
   );
   api.use("/staff", createStaffRouter({ staffService: deps.staffService }));
   api.use("/customers", createCustomersRouter({ customersService: deps.customersService }));
+  api.use("/audit", createAuditRouter({ auditService: deps.auditService }));
+  api.use("/portal", createPortalRouter({ customersService: deps.customersService }));
   api.use("/events", createEventsRouter(deps.eventBus));
 
   return api;

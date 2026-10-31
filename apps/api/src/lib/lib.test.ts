@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { InvalidTransitionError } from "./errors.js";
 import { createEventBus } from "./events.js";
 import { pageWindow, paginate } from "./paginate.js";
+import { isTimeZone } from "./time.js";
 import { createTransitions } from "./transition.js";
 
 describe("paginate()", () => {
@@ -98,5 +99,15 @@ describe("createEventBus()", () => {
 
     expect(listener).not.toHaveBeenCalled();
     expect(bus.listenerCount()).toBe(0);
+  });
+});
+
+describe("isTimeZone()", () => {
+  it("accepts canonical names and aliases like Asia/Kolkata", () => {
+    for (const tz of ["Asia/Kolkata", "Asia/Calcutta", "UTC", "Europe/London"]) expect(isTimeZone(tz)).toBe(true);
+  });
+
+  it("rejects unknown names", () => {
+    for (const tz of ["Not/AZone", "IST+5:30", ""]) expect(isTimeZone(tz)).toBe(false);
   });
 });
