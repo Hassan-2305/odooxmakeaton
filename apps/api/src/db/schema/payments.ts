@@ -23,6 +23,8 @@ export const payments = pgTable(
   },
   (t) => [
     index("payments_customer_id_idx").on(t.customerId),
+    // Default list sort, date filters and the collections / summary reports.
+    index("payments_paid_on_idx").on(t.paidOn.desc().nullsFirst(), t.id),
     check("payments_amount_chk", sql`${t.amountPaise} > 0`),
   ],
 );

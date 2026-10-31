@@ -48,6 +48,9 @@ export const subscriptions = pgTable(
   (t) => [
     index("subscriptions_status_next_invoice_date_idx").on(t.status, t.nextInvoiceDate),
     index("subscriptions_customer_id_idx").on(t.customerId),
+    // Default list sort (newest first) and the expiring-soon filter.
+    index("subscriptions_created_at_idx").on(t.createdAt.desc().nullsFirst(), t.id),
+    index("subscriptions_expiry_date_idx").on(t.expiryDate),
     check("subscriptions_anchor_day_chk", sql`${t.anchorDay} between 1 and 31`),
     check("subscriptions_payment_terms_chk", sql`${t.paymentTermsDays} >= 0`),
     check(

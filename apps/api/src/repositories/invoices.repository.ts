@@ -6,7 +6,7 @@ import type {
   InvoiceListQuery,
   ListResponse,
 } from "@brightloop/shared";
-import { and, asc, count, eq, gt, gte, inArray, lt, lte, type SQL, sql } from "drizzle-orm";
+import { and, asc, count, eq, getTableColumns, gt, gte, inArray, lt, lte, type SQL, sql } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import {
   creditNotes,
@@ -49,9 +49,18 @@ const creditedSql = sql<number>`coalesce((
 
 const balanceSql = sql<number>`(${invoices.totalPaise} - ${invoices.amountPaidPaise} - ${creditedSql})`;
 
-const summarySelect = { invoice: invoices, customerName: customers.name, creditedPaise: creditedSql };
+// Every invoice column except the customer_snapshot jsonb, which Invoice doesn't carry
+// (the detail view loads it separately): lists and sorts stay narrow.
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
+const { customerSnapshot: _snapshot, ...invoiceColumns } = getTableColumns(invoices);
 
-function toInvoice(row: { invoice: InvoiceRow; customerName: string; creditedPaise: number }): Invoice {
+const summarySelect = { invoice: invoiceColumns, customerName: customers.name, creditedPaise: creditedSql };
+
+function toInvoice(row: {
+  invoice: Omit<InvoiceRow, "customerSnapshot">;
+  customerName: string;
+  creditedPaise: number;
+}): Invoice {
   const i = row.invoice;
   return {
     id: i.id,

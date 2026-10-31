@@ -126,5 +126,14 @@ pnpm dev
 | `pnpm db:migrate`  | Apply migrations in `database/migrations`      |
 | `pnpm db:seed`     | Run the seed script                            |
 | `pnpm db:seed:demo`| Load the demo dataset (see "Demo dataset")     |
+| `pnpm perf:check`  | Time every list/report/portal endpoint of a running API (see below) |
+
+### Performance check
+
+With the API running and the demo dataset loaded, `pnpm perf:check` signs in as the admin
+and as the demo customer, calls every list, report and portal endpoint with typical filters
+5 times each, and prints the median and max wall time plus the server's `tookMs`. It exits
+non-zero if any endpoint misses the target (median < 500 ms, max < 2000 ms).
+Options: `--base=http://localhost:4000`, `--runs=5`, `--save=before.json`, `--compare=before.json`.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for branch and PR rules.

@@ -44,6 +44,7 @@ export const billingRuns = pgTable(
   },
   (t) => [
     index("billing_runs_business_date_idx").on(t.businessDate),
+    index("billing_runs_started_at_idx").on(t.startedAt.desc().nullsFirst(), t.id),
     check(
       "billing_runs_counts_chk",
       sql`${t.consideredCount} >= 0 and ${t.invoicedCount} >= 0 and ${t.skippedCount} >= 0 and ${t.failedCount} >= 0`,
@@ -92,6 +93,9 @@ export const invoices = pgTable(
     unique("invoices_subscription_period_unique").on(t.subscriptionId, t.periodStart),
     index("invoices_status_due_date_idx").on(t.status, t.dueDate),
     index("invoices_customer_id_idx").on(t.customerId),
+    // Default list sort (newest first); issue-date filters and the summary report.
+    index("invoices_created_at_idx").on(t.createdAt.desc().nullsFirst(), t.id),
+    index("invoices_issue_date_idx").on(t.issueDate),
     check("invoices_period_chk", sql`${t.periodEnd} > ${t.periodStart}`),
     check(
       "invoices_due_date_chk",
