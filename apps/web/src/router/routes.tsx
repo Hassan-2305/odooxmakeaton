@@ -12,6 +12,11 @@ import { NotFoundPage } from "@/pages/not-found-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
 import { DashboardPage } from "@/pages/dashboard/dashboard-page";
 import { IntegrityPage } from "@/pages/integrity/integrity-page";
+import { PortalInvoicesPage } from "@/pages/portal/portal-invoices-page";
+import { PortalOverviewPage } from "@/pages/portal/portal-overview-page";
+import { PortalPaymentsPage } from "@/pages/portal/portal-payments-page";
+import { PortalProfilePage } from "@/pages/portal/portal-profile-page";
+import { PortalSubscriptionsPage } from "@/pages/portal/portal-subscriptions-page";
 import { RenewalsPage } from "@/pages/renewals/renewals-page";
 import { AuditPage } from "@/pages/settings/audit-page";
 import { GuestOnly, HomeRedirect, RequireRole } from "./guards";
@@ -35,11 +40,18 @@ const appRoutes: RouteObject[] = APP_NAV.flatMap((group) =>
   })),
 );
 
-const portalRoutes: RouteObject[] = PORTAL_NAV.map((item) =>
-  item.to === "/portal"
-    ? { index: true, element: <PlaceholderPage title={item.label} /> }
-    : { path: relative(item.to, "/portal"), element: <PlaceholderPage title={item.label} /> },
-);
+const PORTAL_SCREENS: Record<string, ReactNode> = {
+  "/portal": <PortalOverviewPage />,
+  "/portal/subscriptions": <PortalSubscriptionsPage />,
+  "/portal/invoices": <PortalInvoicesPage />,
+  "/portal/payments": <PortalPaymentsPage />,
+  "/portal/profile": <PortalProfilePage />,
+};
+
+const portalRoutes: RouteObject[] = PORTAL_NAV.map((item) => {
+  const element = PORTAL_SCREENS[item.to] ?? <PlaceholderPage title={item.label} />;
+  return item.to === "/portal" ? { index: true, element } : { path: relative(item.to, "/portal"), element };
+});
 
 export const router = createBrowserRouter([
   { index: true, element: <HomeRedirect /> },
