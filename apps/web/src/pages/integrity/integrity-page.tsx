@@ -44,6 +44,7 @@ const columns: DataTableColumn<IntegrityFinding>[] = [
   },
   {
     id: "impact",
+    cardLabel: "Impact",
     header: (
       <span className="inline-flex items-center gap-1">
         Impact

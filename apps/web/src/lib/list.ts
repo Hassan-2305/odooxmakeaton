@@ -1,6 +1,6 @@
 import type { ListResponse } from "@brightloop/shared";
 import { keepPreviousData, useQuery } from "@tanstack/react-query";
-import { useCallback, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useSearchParams } from "react-router";
 import { api, type QueryParams } from "./api";
 
@@ -18,22 +18,41 @@ export interface ListState {
 
 const RESERVED = new Set(["page", "pageSize", "sort"]);
 
-/** Page, page size, sort and filters stored in the URL, so lists survive reloads and back/forward. */
-export function useListState(defaults: { pageSize?: number; sort?: string } = {}) {
+type Patch = Partial<Record<string, string | number | undefined>>;
+
+function listApi(state: ListState, update: (patch: Patch, resetPage?: boolean) => void) {
+  return {
+    ...state,
+    setPage: (page: number) => update({ page: page > 1 ? page : undefined }, false),
+    setPageSize: (pageSize: number) => update({ pageSize }),
+    setSort: (sort: string | undefined) => update({ sort }),
+    setFilter: (key: string, value: string | undefined) => update({ [key]: value }),
+    setFilters: (patch: Record<string, string | undefined>) => update(patch),
+    clearFilters: () => update(Object.fromEntries(Object.keys(state.filters).map((k) => [k, undefined]))),
+  };
+}
+
+/**
+ * Page, page size, sort and filters stored in the URL, so lists survive reloads and back/forward.
+ * `exclude` names query params that belong to the page (e.g. "tab") rather than to the list.
+ */
+export function useListState(defaults: { pageSize?: number; sort?: string; exclude?: readonly string[] } = {}) {
   const [params, setParams] = useSearchParams();
+  const excludeKey = defaults.exclude?.join(",") ?? "";
 
   const state = useMemo<ListState>(() => {
+    const excluded = new Set(excludeKey ? excludeKey.split(",") : []);
     const page = Math.max(1, Number(params.get("page")) || 1);
     const pageSize = Number(params.get("pageSize")) || defaults.pageSize || DEFAULT_LIST_PAGE_SIZE;
     const filters: Record<string, string> = {};
     params.forEach((value, key) => {
-      if (!RESERVED.has(key) && value !== "") filters[key] = value;
+      if (!RESERVED.has(key) && !excluded.has(key) && value !== "") filters[key] = value;
     });
     return { page, pageSize, sort: params.get("sort") ?? defaults.sort, filters };
-  }, [params, defaults.pageSize, defaults.sort]);
+  }, [params, defaults.pageSize, defaults.sort, excludeKey]);
 
   const update = useCallback(
-    (patch: Partial<Record<string, string | number | undefined>>, resetPage = true) => {
+    (patch: Patch, resetPage = true) => {
       setParams(
         (prev) => {
           const next = new URLSearchParams(prev);
@@ -50,17 +69,43 @@ export function useListState(defaults: { pageSize?: number; sort?: string } = {}
     [setParams],
   );
 
-  return {
-    ...state,
-    setPage: (page: number) => update({ page: page > 1 ? page : undefined }, false),
-    setPageSize: (pageSize: number) => update({ pageSize }),
-    setSort: (sort: string | undefined) => update({ sort }),
-    setFilter: (key: string, value: string | undefined) => update({ [key]: value }),
-    clearFilters: () => update(Object.fromEntries(Object.keys(state.filters).map((k) => [k, undefined]))),
-  };
+  return listApi(state, update);
 }
 
-export type ListStateApi = ReturnType<typeof useListState>;
+/**
+ * Same API as useListState but kept in component state, for secondary lists embedded in a
+ * detail page (a customer's invoices) so they don't fight over the page's query string.
+ */
+export function useLocalListState(defaults: { pageSize?: number; sort?: string; filters?: Record<string, string> } = {}) {
+  const [state, setState] = useState<ListState>(() => ({
+    page: 1,
+    pageSize: defaults.pageSize ?? 10,
+    sort: defaults.sort,
+    filters: defaults.filters ?? {},
+  }));
+
+  const update = useCallback(
+    (patch: Patch, resetPage = true) =>
+      setState((prev) => {
+        const next: ListState = { ...prev, filters: { ...prev.filters } };
+        for (const [key, raw] of Object.entries(patch)) {
+          const value = raw === undefined || raw === "" ? undefined : String(raw);
+          if (key === "page") next.page = Number(value) || 1;
+          else if (key === "pageSize") next.pageSize = Number(value) || prev.pageSize;
+          else if (key === "sort") next.sort = value ?? defaults.sort;
+          else if (value === undefined) delete next.filters[key];
+          else next.filters[key] = value;
+        }
+        if (resetPage && !("page" in patch)) next.page = 1;
+        return next;
+      }),
+    [defaults.sort],
+  );
+
+  return listApi(state, update);
+}
+
+export type ListStateApi = ReturnType<typeof listApi>;
 
 /**
  * Fetches one page of a list endpoint. `key` is the TanStack query key root (e.g. "invoices")

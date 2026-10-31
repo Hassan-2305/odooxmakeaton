@@ -59,6 +59,7 @@ const columns: DataTableColumn<ReportRenewal>[] = [
   },
   {
     id: "renewable",
+    cardLabel: "Renewable",
     header: (
       <span className="inline-flex items-center gap-1">
         Renewable
@@ -70,6 +71,7 @@ const columns: DataTableColumn<ReportRenewal>[] = [
   },
   {
     id: "mrr",
+    cardLabel: "MRR",
     header: (
       <span className="inline-flex items-center gap-1">
         MRR

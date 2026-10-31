@@ -5,7 +5,6 @@ import {
   CalendarClockIcon,
   FileTextIcon,
   LayoutDashboardIcon,
-  PercentIcon,
   PlayCircleIcon,
   ReceiptIcon,
   RepeatIcon,
@@ -16,7 +15,6 @@ import {
   WalletIcon,
   type LucideIcon,
   CircleUserIcon,
-  LandmarkIcon,
 } from "lucide-react";
 
 export interface NavItem {
@@ -66,8 +64,6 @@ export const APP_NAV: NavGroup[] = [
     roles: ADMIN,
     items: [
       { label: "Staff", to: "/settings/staff", icon: UserCogIcon },
-      { label: "Taxes", to: "/settings/taxes", icon: LandmarkIcon },
-      { label: "Discounts", to: "/settings/discounts", icon: PercentIcon },
       { label: "Audit", to: "/settings/audit", icon: ScrollTextIcon },
     ],
   },

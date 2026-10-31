@@ -18,7 +18,7 @@ interface FormFieldProps {
 export function FormField({ label, error, hint, children, labelAside, className }: FormFieldProps) {
   const autoId = useId();
   const id = children.props.id ?? autoId;
-  const message = typeof error === "string" ? error : error?.message;
+  const message = friendly(typeof error === "string" ? error : error?.message);
   const hintId = hint ? `${id}-hint` : undefined;
   const errorId = message ? `${id}-error` : undefined;
   const describedBy = [hintId, errorId].filter(Boolean).join(" ") || undefined;
@@ -46,4 +46,14 @@ export function FormField({ label, error, hint, children, labelAside, className 
       )}
     </div>
   );
+}
+
+/** zod's type errors ("Invalid input: expected number, received NaN") read badly under a field. */
+function friendly(message: string | undefined): string | undefined {
+  if (!message) return message;
+  if (/expected number/i.test(message)) return "Enter a number";
+  if (/expected string, received (undefined|null)/i.test(message)) return "Required";
+  if (/invalid (iso )?date/i.test(message)) return "Enter a valid date";
+  if (/invalid uuid/i.test(message)) return "Pick one";
+  return message;
 }
