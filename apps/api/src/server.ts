@@ -6,13 +6,16 @@ import { consoleLogger } from "./lib/logger.js";
 import { createSmtpMailer } from "./lib/mailer.js";
 import { createPasswordHasher } from "./lib/password.js";
 import { createCsrf } from "./middleware/csrf.js";
+import { createCustomersRepository } from "./repositories/customers.repository.js";
 import { createHealthRepository } from "./repositories/health.repository.js";
 import { createPasswordResetsRepository } from "./repositories/password-resets.repository.js";
 import { createSessionsRepository } from "./repositories/sessions.repository.js";
 import { createUsersRepository } from "./repositories/users.repository.js";
 import { createAuthService } from "./services/auth.service.js";
+import { createCustomersService } from "./services/customers.service.js";
 import { createHealthService } from "./services/health.service.js";
 import { createPasswordResetService } from "./services/password-reset.service.js";
+import { createStaffService } from "./services/staff.service.js";
 
 const secureCookies = env.NODE_ENV === "production";
 const users = createUsersRepository(db);
@@ -39,6 +42,8 @@ const app = createApp({
     logger: consoleLogger,
     appUrl: env.APP_URL,
   }),
+  staffService: createStaffService({ users, hasher }),
+  customersService: createCustomersService({ customers: createCustomersRepository(db) }),
 });
 
 const server = app.listen(env.PORT, () => {

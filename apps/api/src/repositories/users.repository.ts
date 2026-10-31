@@ -2,6 +2,7 @@ import type { AuthUser } from "@brightloop/shared";
 import { eq, sql } from "drizzle-orm";
 import type { Db } from "../db/client.js";
 import { customers, users } from "../db/schema/index.js";
+import { writeAudit } from "./audit.repository.js";
 
 export interface UserWithPassword extends AuthUser {
   passwordHash: string;
@@ -62,6 +63,35 @@ export function createUsersRepository(db: Db) {
 
     async touchLastLogin(userId: string): Promise<void> {
       await db.update(users).set({ lastLoginAt: new Date() }).where(eq(users.id, userId));
+    },
+
+    /** Creates a staff/admin user and its audit_log row in one transaction. */
+    async createStaffUser(
+      input: { name: string; email: string; passwordHash: string; role: "staff" | "admin" },
+      actorUserId: string,
+    ): Promise<AuthUser> {
+      return db.transaction(async (tx) => {
+        const [user] = await tx
+          .insert(users)
+          .values({ ...input, customerId: null })
+          .returning({
+            id: users.id,
+            email: users.email,
+            name: users.name,
+            role: users.role,
+            customerId: users.customerId,
+          });
+        await writeAudit(tx, {
+          actorUserId,
+          action: "staff.created",
+          entityType: "user",
+          entityId: user!.id,
+          before: null,
+          // Never the password hash.
+          after: { ...user, isActive: true },
+        });
+        return user!;
+      });
     },
   };
 }

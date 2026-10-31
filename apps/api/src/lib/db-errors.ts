@@ -11,6 +11,11 @@ function pgFields(err: unknown): PgErrorFields | undefined {
   return undefined;
 }
 
+/** True for a foreign-key violation (23503), e.g. deleting a row other rows still reference. */
+export function isForeignKeyViolation(err: unknown): boolean {
+  return pgFields(err)?.code === "23503";
+}
+
 /** True for a unique-constraint violation (23505), optionally on a specific constraint. */
 export function isUniqueViolation(err: unknown, constraint?: string): boolean {
   const fields = pgFields(err);

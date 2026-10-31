@@ -4,9 +4,11 @@ import { silentLogger } from "../lib/logger.js";
 import { createPasswordHasher } from "../lib/password.js";
 import { createCsrf } from "../middleware/csrf.js";
 import { createAuthService } from "../services/auth.service.js";
+import { createCustomersService } from "../services/customers.service.js";
 import { createHealthService } from "../services/health.service.js";
 import { createPasswordResetService } from "../services/password-reset.service.js";
-import { createFakeAuthStore, createFakeClock, createFakeMailer } from "./fakes.js";
+import { createStaffService } from "../services/staff.service.js";
+import { createFakeAuthStore, createFakeClock, createFakeCustomersRepo, createFakeMailer } from "./fakes.js";
 
 export const TEST_SECRET = "test-secret-that-is-at-least-32-characters";
 
@@ -34,6 +36,7 @@ export function createTestApp(overrides: Partial<AppDeps> = {}) {
     appUrl: "http://localhost:3000",
     now: clock.now,
   });
+  const customers = createFakeCustomersRepo();
 
   const app = createApp({
     logger: silentLogger,
@@ -43,9 +46,11 @@ export function createTestApp(overrides: Partial<AppDeps> = {}) {
     healthService: createHealthService({ ping: async () => {} }),
     authService,
     passwordResetService,
+    staffService: createStaffService({ users: store.usersRepo, hasher: testHasher }),
+    customersService: createCustomersService({ customers: customers.repo }),
     authRateLimit: false,
     ...overrides,
   });
 
-  return { app, store, authService, passwordResetService, clock, mail };
+  return { app, store, authService, passwordResetService, clock, mail, customers };
 }

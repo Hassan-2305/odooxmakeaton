@@ -3,6 +3,8 @@ export * from "./enums.js";
 export * from "./common.js";
 export * from "./list-query.js";
 export * from "./auth.js";
+export * from "./staff.js";
+export * from "./customers.js";
 export * from "./catalog.js";
 export * from "./sales.js";
 export * from "./subscriptions.js";
