@@ -55,7 +55,7 @@ export function createPasswordResetService({
       mailer
         .send({
           to: user.email,
-          subject: "Reset your Brightloop One password",
+          subject: "Reset your Recurra password",
           text: [
             `Hi ${user.name},`,
             "",

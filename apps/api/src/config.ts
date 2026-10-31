@@ -23,7 +23,7 @@ const envSchema = z.object({
   APP_URL: z.string().url().default("http://localhost:3000"),
   SMTP_HOST: z.string().min(1).default("localhost"),
   SMTP_PORT: z.coerce.number().int().positive().default(1025),
-  MAIL_FROM: z.string().min(3).default("Brightloop One <no-reply@brightloop.local>"),
+  MAIL_FROM: z.string().min(3).default("Recurra <no-reply@recurra.local>"),
   /** IANA timezone for calendar-day logic (billing days, date filters). */
   BUSINESS_TZ: z.string().refine(isTimeZone, "Unknown timezone").default("Asia/Kolkata"),
 });

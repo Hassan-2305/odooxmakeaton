@@ -45,11 +45,11 @@ export function AllocationPicker({ customerId, available, value, onChange, error
   return (
     <div className="grid gap-2">
       {invoices.open.length === 0 ? (
-        <p className="rounded-md bg-surface px-3 py-2 text-sm text-muted-foreground">
+        <p className="rounded-lg bg-surface px-3 py-2 text-sm text-muted-foreground">
           No open invoices. The payment will be recorded as unallocated credit.
         </p>
       ) : (
-        <ul className="divide-y rounded-md border">
+        <ul className="divide-y overflow-hidden rounded-xl border">
           {invoices.open.map((inv) => {
             const idx = value.findIndex((a) => a.invoiceId === inv.id);
             const amount = amountFor(inv.id);

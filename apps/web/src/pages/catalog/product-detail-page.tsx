@@ -57,7 +57,7 @@ function AttributesCard({ productId, attributes, isAdmin }: { productId: string;
       ) : (
         <div className="grid gap-4 md:grid-cols-2">
           {attributes.map((a) => (
-            <div key={a.id} className="rounded-md border">
+            <div key={a.id} className="overflow-hidden rounded-xl border bg-white">
               <div className="flex items-center justify-between gap-2 border-b bg-surface px-3 py-2">
                 <p className="font-medium">
                   {a.name}

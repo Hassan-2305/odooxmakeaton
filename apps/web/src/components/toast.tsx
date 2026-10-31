@@ -18,7 +18,10 @@ export function Toaster() {
           <div
             key={t.id}
             role={t.variant === "error" ? "alert" : "status"}
-            className="pointer-events-auto flex items-start gap-3 rounded-lg border bg-popover p-3 text-sm shadow-lg animate-in fade-in-0 slide-in-from-bottom-2"
+            className={cn(
+              "pointer-events-auto flex items-start gap-3 rounded-xl border border-l-4 bg-popover p-3.5 text-sm shadow-xl shadow-slate-900/10 animate-in fade-in-0 slide-in-from-bottom-2",
+              t.variant === "success" ? "border-l-status-paid" : "border-l-status-overdue",
+            )}
           >
             <Icon
               className={cn(

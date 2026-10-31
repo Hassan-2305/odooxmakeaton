@@ -13,11 +13,11 @@ interface ErrorStateProps {
 export function ErrorState({ title = "Couldn't load this", error, onRetry, className }: ErrorStateProps) {
   return (
     <div role="alert" className={cn("flex flex-col items-center justify-center gap-3 px-6 py-12 text-center", className)}>
-      <div className="flex size-12 items-center justify-center rounded-full bg-status-overdue-bg text-status-overdue">
+      <div className="flex size-14 items-center justify-center rounded-2xl bg-status-overdue-bg text-status-overdue ring-1 ring-red-200/70">
         <AlertTriangleIcon className="size-6" aria-hidden />
       </div>
       <div className="space-y-1">
-        <p className="font-medium">{title}</p>
+        <p className="font-semibold">{title}</p>
         {error !== undefined && <p className="max-w-sm text-sm text-muted-foreground">{errorMessage(error)}</p>}
       </div>
       {onRetry && (

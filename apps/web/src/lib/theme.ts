@@ -1,31 +1,37 @@
 /**
- * Brightloop design tokens. This file is the single source of truth for colour:
+ * Recurra design tokens. This file is the single source of truth for colour:
  * `applyTheme()` writes every token to a CSS variable on <html>, and index.css maps
  * those variables into Tailwind (`bg-primary`, `text-status-paid-fg`, ...).
  */
 
 export const colors = {
-  background: "#ffffff",
-  foreground: "#1f2328", // charcoal
-  surface: "#f6f6f7", // grey surfaces: sidebar, table header, cards on white
-  "surface-foreground": "#1f2328",
+  background: "#f5f7fb", // soft cool-grey page
+  foreground: "#0f172a", // slate ink
+  surface: "#f8fafc", // table headers, footers, subtle panels
+  "surface-foreground": "#0f172a",
   card: "#ffffff",
-  "card-foreground": "#1f2328",
+  "card-foreground": "#0f172a",
   popover: "#ffffff",
-  "popover-foreground": "#1f2328",
+  "popover-foreground": "#0f172a",
   primary: "#ea580c", // orange
   "primary-foreground": "#ffffff",
-  secondary: "#f1f1f3",
-  "secondary-foreground": "#1f2328",
-  muted: "#f1f1f3",
-  "muted-foreground": "#6b7078",
+  secondary: "#f1f5f9",
+  "secondary-foreground": "#0f172a",
+  muted: "#f1f5f9",
+  "muted-foreground": "#64748b",
   accent: "#fff1e8", // orange tint for hover / active nav
   "accent-foreground": "#c2410c",
   destructive: "#dc2626",
   "destructive-foreground": "#ffffff",
-  border: "#e4e4e7",
-  input: "#d9d9de",
+  border: "#e6eaf0",
+  input: "#dbe1e8",
   ring: "#f97316",
+  // Dark navy sidebar
+  sidebar: "#0f1729",
+  "sidebar-foreground": "#cbd5e1",
+  "sidebar-muted": "#64748b",
+  "sidebar-accent": "#2a1d1a", // warm tint behind the active item
+  "sidebar-border": "#1e293b",
 } as const;
 
 /** Status palette: each tone has a strong colour, a soft background and readable text. */
@@ -38,7 +44,7 @@ export const statusColors = {
 
 export type StatusTone = keyof typeof statusColors;
 
-export const radius = "0.5rem";
+export const radius = "0.625rem";
 
 /** Every token as a CSS custom property, e.g. `--primary`, `--status-paid-bg`. */
 export function themeVariables(): Record<string, string> {

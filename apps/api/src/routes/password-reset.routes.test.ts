@@ -60,7 +60,7 @@ describe("POST /api/auth/forgot-password", () => {
     expect(ctx.mail.sent).toHaveLength(1);
     const message = ctx.mail.sent[0]!;
     expect(message.to).toBe(EMAIL);
-    expect(message.subject).toBe("Reset your Brightloop One password");
+    expect(message.subject).toBe("Reset your Recurra password");
     expect(message.text).toMatch(/http:\/\/localhost:3000\/reset-password\?token=[\w-]{43}/);
     expect(message.text).toContain("expires in 30 minutes");
   });
