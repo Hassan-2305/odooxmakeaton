@@ -37,6 +37,7 @@ export type DiscountScope = z.infer<typeof discountScopeSchema>;
 export const SUBSCRIPTION_STATUSES = [
   "draft",
   "quotation",
+  "confirmed",
   "active",
   "paused",
   "closed",

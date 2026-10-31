@@ -12,6 +12,7 @@ export const discountScope = pgEnum("discount_scope", ["subscription", "product"
 export const subscriptionStatus = pgEnum("subscription_status", [
   "draft",
   "quotation",
+  "confirmed",
   "active",
   "paused",
   "closed",
