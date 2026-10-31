@@ -35,9 +35,15 @@ export function createPortalRouter({
     res.json({ invoice: await portalService.getInvoice(scopeToCustomer(req), id) });
   });
 
-  router.get("/invoices/:id/pdf", validate({ params: idParamSchema }), async (req) => {
+  router.get("/invoices/:id/pdf", validate({ params: idParamSchema }), async (req, res) => {
     const { id } = req.params as unknown as IdParam;
-    await portalService.invoicePdf(scopeToCustomer(req), id);
+    const { buffer, filename } = await portalService.invoicePdf(scopeToCustomer(req), id);
+    res
+      .status(200)
+      .type("application/pdf")
+      .set("Content-Disposition", `inline; filename="${filename}"`)
+      .set("Cache-Control", "private, no-store")
+      .send(buffer);
   });
 
   router.get("/payments", async (req, res) => {

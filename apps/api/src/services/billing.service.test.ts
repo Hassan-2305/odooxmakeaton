@@ -261,7 +261,20 @@ describe("events, history and access", () => {
     expect(events[1]!.payload).toMatchObject({ id: res.body.run.id, invoicedCount: 1 });
   });
 
-  it("lists runs and shows one with its items", async () => {
+  it("runs an integrity scan after live runs only", async () => {
+    const id = await activeSubscription({ startDate: TODAY });
+    const dry = await run("dry", [id]);
+    expect(dry.body.run.integrityScan).toBeUndefined();
+
+    const live = await run("live", [id]);
+    expect(live.body.run.integrityScan).toMatchObject({
+      asOf: TODAY,
+      detected: expect.any(Number),
+      byRule: expect.objectContaining({ missing_invoice: expect.any(Number) }),
+    });
+  });
+
+    it("lists runs and shows one with its items", async () => {
     const id = await activeSubscription({ startDate: TODAY });
     const created = (await run("live", [id])).body.run;
     const list = await staff.get("/api/billing/runs?pageSize=5");

@@ -23,6 +23,8 @@ interface Deps {
   eventBus: EventBus;
 }
 
+type Actor = Pick<AuthUser, "id">;
+
 interface LockedPayment {
   id: string;
   customerId: string;
@@ -42,7 +44,7 @@ export function createPaymentService({ payments, invoices, auditService, eventBu
    * payment's customer; the amount may not exceed the invoice balance or what is left of
    * the payment. The invoice becomes paid once nothing is owed.
    */
-  async function applyAllocation(tx: DbOrTx, actor: AuthUser, payment: LockedPayment, allocation: PaymentAllocationInput) {
+  async function applyAllocation(tx: DbOrTx, actor: Actor, payment: LockedPayment, allocation: PaymentAllocationInput) {
     const invoice = await invoices.lock(tx, allocation.invoiceId);
     if (!invoice) throw new NotFoundError("Invoice");
     if (invoice.customerId !== payment.customerId) {
@@ -125,7 +127,7 @@ export function createPaymentService({ payments, invoices, auditService, eventBu
     },
 
     /** Allocates (more of) an existing payment to invoices. */
-    async allocate(actor: AuthUser, paymentId: string, allocations: PaymentAllocationInput[]) {
+    async allocate(actor: Actor, paymentId: string, allocations: PaymentAllocationInput[]) {
       await payments.transaction(async (tx) => {
         const locked = await payments.lock(tx, paymentId);
         if (!locked) throw new NotFoundError("Payment");

@@ -12,6 +12,7 @@ import {
   type InvoiceStatus,
   type PaymentMethod,
 } from "./enums.js";
+import type { IntegrityScanResult } from "./findings.js";
 import { createListQuerySchema } from "./list-query.js";
 
 /** POST /api/billing/runs?mode=dry|live. dry previews the run and writes nothing. */
@@ -91,6 +92,8 @@ export interface BillingRun {
 
 export interface BillingRunDetail extends BillingRun {
   items: BillingRunItem[];
+  /** Integrity scan run after a live billing run; null when it was skipped or failed. */
+  integrityScan?: IntegrityScanResult | null;
 }
 
 // Invoices

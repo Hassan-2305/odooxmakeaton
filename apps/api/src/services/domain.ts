@@ -7,6 +7,7 @@ import { createBillingService } from "./billing.service.js";
 import { createBillingRunsRepository } from "../repositories/billing-runs.repository.js";
 import { createCatalogRepository } from "../repositories/catalog.repository.js";
 import { createDiscountsRepository } from "../repositories/discounts.repository.js";
+import { createIntegrityRepository } from "../repositories/integrity.repository.js";
 import { createInvoicesRepository } from "../repositories/invoices.repository.js";
 import { createPaymentsRepository } from "../repositories/payments.repository.js";
 import { createSettingsRepository } from "../repositories/settings.repository.js";
@@ -15,6 +16,7 @@ import { createTemplatesRepository } from "../repositories/templates.repository.
 import { createPlansRepository, createTaxesRepository } from "../repositories/taxes-plans.repository.js";
 import { createCatalogService } from "./catalog.service.js";
 import { createDiscountService } from "./discount.service.js";
+import { createIntegrityService } from "./integrity.service.js";
 import { createInvoiceActionsService } from "./invoice-actions.service.js";
 import { createInvoiceService, type InvoiceService } from "./invoice.service.js";
 import { createPaymentService } from "./payment.service.js";
@@ -67,6 +69,9 @@ export function createDomainServices(options: DomainOptions) {
 
   const invoices = createInvoicesRepository(db);
   const invoiceService = createInvoiceService({ invoices, subscriptions, settings, taxService, discountService });
+  // Billing scans integrity after live runs and integrity resolves through billing:
+  // the closure defers the lookup until integrityService exists.
+  const integrity = { scan: (...args: Parameters<typeof integrityService.scan>) => integrityService.scan(...args) };
   const billingService = createBillingService({
     runs: createBillingRunsRepository(db),
     subscriptions,
@@ -75,6 +80,7 @@ export function createDomainServices(options: DomainOptions) {
     invoiceService: options.wrapInvoiceService?.(invoiceService) ?? invoiceService,
     subscriptionService,
     eventBus,
+    integrity,
     timezone,
     logger,
     now,
@@ -91,6 +97,16 @@ export function createDomainServices(options: DomainOptions) {
     now,
   });
   const paymentService = createPaymentService({ payments, invoices, auditService, eventBus });
+  const integrityService = createIntegrityService({
+    repo: createIntegrityRepository(db),
+    timezone,
+    now,
+    corrections: {
+      allocatePayment: (actor, paymentId, allocations) => paymentService.allocate(actor, paymentId, allocations),
+      generateInvoice: (actor, subscriptionId, periodStart) =>
+        billingService.billPeriod(actor, subscriptionId, periodStart),
+    },
+  });
 
   return {
     taxService,
@@ -103,6 +119,7 @@ export function createDomainServices(options: DomainOptions) {
     billingService,
     invoiceActionsService,
     paymentService,
+    integrityService,
   };
 }
 

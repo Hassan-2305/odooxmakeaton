@@ -9,7 +9,6 @@ import { createCsrf } from "./middleware/csrf.js";
 import { createAuditRepository } from "./repositories/audit.repository.js";
 import { createCustomersRepository } from "./repositories/customers.repository.js";
 import { createHealthRepository } from "./repositories/health.repository.js";
-import { createIntegrityRepository } from "./repositories/integrity.repository.js";
 import { createPasswordResetsRepository } from "./repositories/password-resets.repository.js";
 import { createPortalRepository } from "./repositories/portal.repository.js";
 import { createReportsRepository } from "./repositories/reports.repository.js";
@@ -21,7 +20,6 @@ import { scheduleBillingRuns } from "./services/billing.scheduler.js";
 import { createCustomersService } from "./services/customers.service.js";
 import { createDomainServices } from "./services/domain.js";
 import { createHealthService } from "./services/health.service.js";
-import { createIntegrityService } from "./services/integrity.service.js";
 import { createPasswordResetService } from "./services/password-reset.service.js";
 import { createPortalService } from "./services/portal.service.js";
 import { createReportsService } from "./services/reports.service.js";
@@ -66,8 +64,11 @@ const app = createApp({
   staffService: createStaffService({ users, hasher }),
   customersService: createCustomersService({ customers: createCustomersRepository(db) }),
   auditService,
-  integrityService: createIntegrityService({ repo: createIntegrityRepository(db), timezone: env.BUSINESS_TZ }),
-  portalService: createPortalService({ repo: createPortalRepository(db) }),
+  integrityService: domain.integrityService,
+  portalService: createPortalService({
+    repo: createPortalRepository(db),
+    invoicePdf: (id) => domain.invoiceActionsService.pdf(id),
+  }),
   reportsService: createReportsService({ repo: createReportsRepository(db), timezone: env.BUSINESS_TZ }),
   domain,
 });

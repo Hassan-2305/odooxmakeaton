@@ -1,7 +1,7 @@
 import type { AuthUser, BillingRunDetail, BillingRunItemOutcome, BillingRunListQuery } from "@brightloop/shared";
 import { isUniqueViolation } from "../lib/db-errors.js";
 import { todayIn } from "../lib/dates.js";
-import { BadRequestError, NotFoundError } from "../lib/errors.js";
+import { BadRequestError, ConflictError, NotFoundError } from "../lib/errors.js";
 import type { EventBus } from "../lib/events.js";
 import { type Logger, silentLogger } from "../lib/logger.js";
 import type { DbOrTx } from "../repositories/audit.repository.js";
@@ -9,6 +9,7 @@ import { type BillingRunsRepository, toBillingRun } from "../repositories/billin
 import type { InvoicesRepository } from "../repositories/invoices.repository.js";
 import type { SubscriptionsRepository } from "../repositories/subscriptions.repository.js";
 import type { PlansRepository } from "../repositories/taxes-plans.repository.js";
+import type { IntegrityService } from "./integrity.service.js";
 import type { InvoiceService } from "./invoice.service.js";
 import { nextPeriodStart } from "./period.service.js";
 import type { SubscriptionService } from "./subscription.service.js";
@@ -22,6 +23,8 @@ export interface RunOptions {
   businessDate?: string;
   /** Limit the run to these subscriptions. */
   subscriptionIds?: string[];
+  /** Live runs end with an integrity scan unless this is set. */
+  skipIntegrityScan?: boolean;
 }
 
 /** Safety stop for catch-up: no subscription bills more periods than this in one run. */
@@ -35,6 +38,8 @@ interface Deps {
   invoiceService: Pick<InvoiceService, "build">;
   subscriptionService: Pick<SubscriptionService, "applyTransition">;
   eventBus: EventBus;
+  /** Scanned after every live run, so findings reflect the new invoices. */
+  integrity?: Pick<IntegrityService, "scan">;
   timezone: string;
   logger?: Logger;
   now?: () => Date;
@@ -155,7 +160,7 @@ export function createBillingService(deps: Deps) {
     return { ...toBillingRun(finished, !live), items: await runs.items(run.id, conn) };
   }
 
-  return {
+  const service = {
     /**
      * Bills every active subscription whose next invoice date is on or before the
      * business date, catching up one period at a time. Each period commits on its own;
@@ -192,7 +197,46 @@ export function createBillingService(deps: Deps) {
         skippedCount: result.skippedCount,
         failedCount: result.failedCount,
       });
+      if (deps.integrity && !options.skipIntegrityScan) {
+        // The invoices are committed either way; a scan failure is logged, not raised.
+        try {
+          result.integrityScan = await deps.integrity.scan(options.actor);
+        } catch (err) {
+          logger.error("integrity scan after billing run failed", {
+            runId: result.id,
+            error: err instanceof Error ? err.message : String(err),
+          });
+          result.integrityScan = null;
+        }
+      }
       return result;
+    },
+
+    /**
+     * Bills one subscription for the period starting `periodStart`, as a live run for
+     * that subscription with the business date set to the period start (so only that
+     * period is due). Used to fix missing_invoice findings. Throws 409 when the period
+     * is not the subscription's next due period or could not be invoiced.
+     */
+    async billPeriod(actor: RunOptions["actor"], subscriptionId: string, periodStart: string) {
+      const run = await service.run({
+        mode: "live",
+        trigger: "manual",
+        actor,
+        businessDate: periodStart,
+        subscriptionIds: [subscriptionId],
+        // The caller resolves its finding itself; a scan now would auto-resolve it first.
+        skipIntegrityScan: true,
+      });
+      const item = run.items.find((i) => i.periodStart === periodStart);
+      if (item?.outcome === "created") {
+        return { billingRunId: run.id, invoiceId: item.invoiceId!, invoiceNumber: item.invoiceNumber };
+      }
+      const failed = run.items.find((i) => i.outcome === "failed" || i.outcome === "skipped");
+      throw new ConflictError(
+        item?.reason ?? failed?.reason ?? `Nothing was due for this subscription on ${periodStart}`,
+        { billingRunId: run.id, outcome: item?.outcome ?? failed?.outcome ?? null },
+      );
     },
 
     list: (query: BillingRunListQuery) => runs.list(query),
@@ -203,6 +247,7 @@ export function createBillingService(deps: Deps) {
       return { ...toBillingRun(run), items: await runs.items(id) };
     },
   };
+  return service;
 }
 
 export type BillingService = ReturnType<typeof createBillingService>;

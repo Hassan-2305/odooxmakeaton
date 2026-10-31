@@ -7,11 +7,13 @@ import { customers, settings, users } from "../db/schema/index.js";
 import { createEventBus } from "../lib/events.js";
 import { CSRF_HEADER } from "../middleware/csrf.js";
 import { createAuditRepository } from "../repositories/audit.repository.js";
+import { createPortalRepository } from "../repositories/portal.repository.js";
 import { createSessionsRepository } from "../repositories/sessions.repository.js";
 import { createUsersRepository } from "../repositories/users.repository.js";
 import { createAuditService } from "../services/audit.service.js";
 import { createAuthService } from "../services/auth.service.js";
 import { createDomainServices, type DomainOptions } from "../services/domain.js";
+import { createPortalService } from "../services/portal.service.js";
 import { createFakeMailer } from "./fakes.js";
 import { createTestApp, testHasher } from "./test-app.js";
 
@@ -52,7 +54,18 @@ export async function createDbTestApp(options: Partial<Omit<DomainOptions, "db">
     hasher: testHasher,
     sessionTtlMs: 60 * 60 * 1000,
   });
-  const { app } = createTestApp({ authService, auditService, eventBus, domain });
+  const portalService = createPortalService({
+    repo: createPortalRepository(db),
+    invoicePdf: (id) => domain.invoiceActionsService.pdf(id),
+  });
+  const { app } = createTestApp({
+    authService,
+    auditService,
+    eventBus,
+    domain,
+    integrityService: domain.integrityService,
+    portalService,
+  });
   const passwordHash = await testHasher.hash(PASSWORD);
 
   /** A supertest agent signed in as a fresh database user with `role`. */

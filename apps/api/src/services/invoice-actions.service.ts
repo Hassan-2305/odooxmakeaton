@@ -27,6 +27,32 @@ export const invoiceTransitions = createTransitions<InvoiceStatus>("invoice", {
   cancelled: [],
 });
 
+/** An invoice with lines, taxes, allocations and credit notes; 404 when missing. */
+export async function loadInvoiceDetail(
+  invoices: Pick<InvoicesRepository, "findById" | "lines" | "allocations" | "creditNotes" | "customerSnapshotOf">,
+  id: string,
+): Promise<InvoiceDetail> {
+  const invoice = await invoices.findById(id);
+  if (!invoice) throw new NotFoundError("Invoice");
+  const [lines, allocations, creditNotes, customerSnapshot] = await Promise.all([
+    invoices.lines(id),
+    invoices.allocations(id),
+    invoices.creditNotes(id),
+    invoices.customerSnapshotOf(id),
+  ]);
+  return { ...invoice, customerSnapshot: customerSnapshot ?? {}, lines, allocations, creditNotes };
+}
+
+/** The invoice PDF function: loads the invoice and renders it, generated on request. */
+export function createInvoicePdf({ invoices, settings }: { invoices: InvoicesRepository; settings: SettingsRepository }) {
+  return async (id: string) => {
+    const invoice = await loadInvoiceDetail(invoices, id);
+    const config = await settings.get();
+    const buffer = await renderInvoicePdf(invoice, config.businessName);
+    return { invoice, buffer, filename: `${invoice.number ?? `draft-${invoice.id}`}.pdf` };
+  };
+}
+
 interface Deps {
   invoices: InvoicesRepository;
   payments: Pick<PaymentsRepository, "countForInvoice">;
@@ -41,24 +67,8 @@ export function createInvoiceActionsService({ invoices, payments, settings, audi
   const now = deps.now ?? (() => new Date());
   const today = () => todayIn(timezone, now());
 
-  async function detail(id: string): Promise<InvoiceDetail> {
-    const invoice = await invoices.findById(id);
-    if (!invoice) throw new NotFoundError("Invoice");
-    const [lines, allocations, creditNotes, customerSnapshot] = await Promise.all([
-      invoices.lines(id),
-      invoices.allocations(id),
-      invoices.creditNotes(id),
-      invoices.customerSnapshotOf(id),
-    ]);
-    return { ...invoice, customerSnapshot: customerSnapshot ?? {}, lines, allocations, creditNotes };
-  }
-
-  async function pdf(id: string) {
-    const invoice = await detail(id);
-    const config = await settings.get();
-    const buffer = await renderInvoicePdf(invoice, config.businessName);
-    return { invoice, buffer, filename: `${invoice.number ?? `draft-${invoice.id}`}.pdf` };
-  }
+  const detail = (id: string) => loadInvoiceDetail(invoices, id);
+  const pdf = createInvoicePdf({ invoices, settings });
 
   return {
     invoiceTransitions,
