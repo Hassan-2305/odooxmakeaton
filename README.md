@@ -150,7 +150,7 @@ return `{ data, total, tookMs }`.
 | Integrity | `POST /integrity/scan`, `GET /integrity/findings`, `POST /integrity/findings/:id/dismiss` `/resolve` | admin, staff (resolve: admin) |
 | Audit | `GET /audit` | admin |
 | Portal | `GET /portal/profile` `/subscriptions` `/invoices` `/invoices/:id` `/invoices/:id/pdf` `/payments`, `POST /portal/requests` | customer (own data only) |
-| Live updates | `GET /events` (server-sent events) | anyone (auth still a TODO) |
+| Live updates | `GET /events` (server-sent events) | signed in; admin and staff get every event, customers only events for their own customer |
 | Health | `GET /health` | anyone |
 
 ## How billing idempotency works
