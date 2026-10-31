@@ -10,11 +10,15 @@ import { RegisterPage } from "@/pages/auth/register-page";
 import { ResetPasswordPage } from "@/pages/auth/reset-password-page";
 import { NotFoundPage } from "@/pages/not-found-page";
 import { PlaceholderPage } from "@/pages/placeholder-page";
+import { DashboardPage } from "@/pages/dashboard/dashboard-page";
+import { RenewalsPage } from "@/pages/renewals/renewals-page";
 import { AuditPage } from "@/pages/settings/audit-page";
 import { GuestOnly, HomeRedirect, RequireRole } from "./guards";
 
 /** Built screens; every other nav item renders a placeholder until its feature lands. */
 const SCREENS: Record<string, ReactNode> = {
+  "/dashboard": <DashboardPage />,
+  "/renewals": <RenewalsPage />,
   "/settings/audit": <AuditPage />,
 };
 

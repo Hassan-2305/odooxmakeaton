@@ -74,3 +74,48 @@ export function useListQuery<T>(key: string, path: string, list: ListState) {
     placeholderData: keepPreviousData,
   });
 }
+
+type SortValue = string | number | boolean | null | undefined;
+
+/**
+ * For endpoints that return every row at once ({ data, tookMs? }, no paging): fetches once,
+ * then sorts and pages in the browser so the result plugs into <DataTable> like a server list.
+ * `sortBy` maps each sortable column's field to the value to compare.
+ */
+export function useClientListQuery<T>(
+  queryKey: readonly unknown[],
+  path: string,
+  list: ListState,
+  options: {
+    params?: QueryParams;
+    sortBy?: Record<string, (row: T) => SortValue>;
+    /** Applied before sorting, e.g. a status filter the endpoint doesn't support. */
+    filter?: (row: T) => boolean;
+  } = {},
+) {
+  const { params, sortBy = {}, filter } = options;
+  return useQuery({
+    queryKey: [...queryKey, params ?? {}],
+    queryFn: ({ signal }) => api<{ data: T[]; tookMs?: number }>(path, { params, signal }),
+    select: (res): ListResponse<T> => {
+      let rows = filter ? res.data.filter(filter) : res.data;
+      const sort = list.sort?.split(",")[0];
+      const field = sort?.replace(/^-/, "");
+      const get = field ? sortBy[field] : undefined;
+      if (get) {
+        const dir = sort!.startsWith("-") ? -1 : 1;
+        rows = [...rows].sort((a, b) => dir * compare(get(a), get(b)));
+      }
+      const start = (list.page - 1) * list.pageSize;
+      return { data: rows.slice(start, start + list.pageSize), total: rows.length, tookMs: res.tookMs ?? 0 };
+    },
+  });
+}
+
+function compare(a: SortValue, b: SortValue): number {
+  if (a === b) return 0;
+  if (a === null || a === undefined) return 1;
+  if (b === null || b === undefined) return -1;
+  if (typeof a === "number" && typeof b === "number") return a - b;
+  return String(a).localeCompare(String(b));
+}
