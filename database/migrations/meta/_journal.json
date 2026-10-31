@@ -43,6 +43,13 @@
       "when": 1793432639874,
       "tag": "0005_billing_outcomes",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1793436073760,
+      "tag": "0006_list_indexes",
+      "breakpoints": true
     }
   ]
 }

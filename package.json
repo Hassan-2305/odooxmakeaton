@@ -14,7 +14,9 @@
     "typecheck": "pnpm -r typecheck",
     "db:generate": "pnpm --filter @brightloop/api db:generate",
     "db:migrate": "pnpm --filter @brightloop/api db:migrate",
-    "db:seed": "pnpm --filter @brightloop/api db:seed"
+    "db:seed": "pnpm --filter @brightloop/api db:seed",
+    "db:seed:demo": "pnpm --filter @brightloop/api db:seed:demo",
+    "perf:check": "pnpm --filter @brightloop/api perf:check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

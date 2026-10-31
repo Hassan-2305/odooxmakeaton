@@ -17,4 +17,5 @@ COPY apps/api apps/api
 
 WORKDIR /app/apps/api
 EXPOSE 4000
-CMD ["sh", "-c", "pnpm db:migrate && pnpm db:seed && pnpm dev"]
+# SEED_DEMO=true also loads the demo dataset (resets the database on every start).
+CMD ["sh", "-c", "pnpm db:migrate && pnpm db:seed && { [ \"$SEED_DEMO\" != true ] || pnpm db:seed:demo --reset --with-faults; } && pnpm dev"]

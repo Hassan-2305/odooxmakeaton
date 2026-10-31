@@ -40,6 +40,7 @@ services:
       APP_URL: http://localhost:3000
       BUSINESS_TZ: Asia/Kolkata
       PORT: "4000"
+      SEED_DEMO: ${SEED_DEMO:-false}
       CHOKIDAR_USEPOLLING: "true"
     ports:
       - "4000:4000"
