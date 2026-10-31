@@ -1,16 +1,10 @@
 import request from "supertest";
 import { describe, expect, it } from "vitest";
-import { createApp } from "./app.js";
-import { createEventBus } from "./lib/events.js";
-import { silentLogger } from "./lib/logger.js";
 import { createHealthService } from "./services/health.service.js";
+import { createTestApp } from "./test/test-app.js";
 
 function appWithPing(ping: () => Promise<void>) {
-  return createApp({
-    logger: silentLogger,
-    eventBus: createEventBus(),
-    healthService: createHealthService({ ping }),
-  });
+  return createTestApp({ healthService: createHealthService({ ping }) }).app;
 }
 
 describe("GET /api/health", () => {

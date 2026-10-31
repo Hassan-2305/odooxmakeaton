@@ -10,8 +10,14 @@ try {
 }
 
 const envSchema = z.object({
+  NODE_ENV: z.enum(["development", "test", "production"]).default("development"),
   DATABASE_URL: z.string().url(),
   PORT: z.coerce.number().int().positive().default(4000),
+  /** Signs CSRF tokens. Use a long random string in production. */
+  SESSION_SECRET: z.string().min(32, "SESSION_SECRET must be at least 32 characters"),
+  SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(7),
+  /** Number of reverse proxies in front of the API, for client IPs in rate limiting. */
+  TRUST_PROXY: z.coerce.number().int().min(0).default(0),
 });
 
 export const env = envSchema.parse(process.env);
