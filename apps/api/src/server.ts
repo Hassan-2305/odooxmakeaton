@@ -17,6 +17,7 @@ import { createSessionsRepository } from "./repositories/sessions.repository.js"
 import { createUsersRepository } from "./repositories/users.repository.js";
 import { createAuthService } from "./services/auth.service.js";
 import { createAuditService } from "./services/audit.service.js";
+import { scheduleBillingRuns } from "./services/billing.scheduler.js";
 import { createCustomersService } from "./services/customers.service.js";
 import { createDomainServices } from "./services/domain.js";
 import { createHealthService } from "./services/health.service.js";
@@ -31,6 +32,15 @@ const users = createUsersRepository(db);
 const hasher = createPasswordHasher(12);
 const mailer = createSmtpMailer({ host: env.SMTP_HOST, port: env.SMTP_PORT, from: env.MAIL_FROM });
 const auditService = createAuditService({ repo: createAuditRepository(db), timezone: env.BUSINESS_TZ });
+
+const domain = createDomainServices({
+  db,
+  auditService,
+  eventBus,
+  mailer,
+  timezone: env.BUSINESS_TZ,
+  logger: consoleLogger,
+});
 
 const app = createApp({
   logger: consoleLogger,
@@ -59,22 +69,18 @@ const app = createApp({
   integrityService: createIntegrityService({ repo: createIntegrityRepository(db), timezone: env.BUSINESS_TZ }),
   portalService: createPortalService({ repo: createPortalRepository(db) }),
   reportsService: createReportsService({ repo: createReportsRepository(db), timezone: env.BUSINESS_TZ }),
-  domain: createDomainServices({
-    db,
-    auditService,
-    eventBus,
-    mailer,
-    timezone: env.BUSINESS_TZ,
-    logger: consoleLogger,
-  }),
+  domain,
 });
 
 const server = app.listen(env.PORT, () => {
   consoleLogger.info(`api listening on http://localhost:${env.PORT}`);
 });
 
+const billingCron = scheduleBillingRuns(domain.billingService, { timezone: env.BUSINESS_TZ, logger: consoleLogger });
+
 for (const signal of ["SIGINT", "SIGTERM"] as const) {
   process.on(signal, () => {
+    void billingCron.stop();
     server.close(() => void pool.end().then(() => process.exit(0)));
     // Open SSE streams never finish on their own.
     server.closeAllConnections();

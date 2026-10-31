@@ -13,16 +13,17 @@ import type { ReportsService } from "../services/reports.service.js";
 import type { StaffService } from "../services/staff.service.js";
 import { createAuditRouter } from "./audit.routes.js";
 import { type AuthRateLimit, createAuthRouter } from "./auth.routes.js";
+import { createBillingRouter } from "./billing.routes.js";
 import { createPlansRouter, createProductsRouter, createTaxesRouter, createVariantsRouter } from "./catalog.routes.js";
 import { createCustomersRouter } from "./customers.routes.js";
 import { createDiscountsRouter } from "./discounts.routes.js";
-import { createSubscriptionsRouter, createTemplatesRouter } from "./subscriptions.routes.js";
 import { createEventsRouter } from "./events.routes.js";
 import { createHealthRouter } from "./health.routes.js";
 import { createIntegrityRouter } from "./integrity.routes.js";
 import { createPortalRouter } from "./portal.routes.js";
 import { createReportsRouter } from "./reports.routes.js";
 import { createStaffRouter } from "./staff.routes.js";
+import { createSubscriptionsRouter, createTemplatesRouter } from "./subscriptions.routes.js";
 
 export interface RouteDeps {
   healthService: HealthService;
@@ -81,4 +82,5 @@ function mountDomainRoutes(api: Router, domain: DomainServices) {
   api.use("/discounts", createDiscountsRouter(domain));
   api.use("/quotation-templates", createTemplatesRouter(domain));
   api.use("/subscriptions", createSubscriptionsRouter(domain));
+  api.use("/billing", createBillingRouter(domain));
 }

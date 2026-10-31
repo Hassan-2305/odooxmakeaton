@@ -36,6 +36,13 @@
       "when": 1793432210250,
       "tag": "0004_subscription_confirmed",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1793432639874,
+      "tag": "0005_billing_outcomes",
+      "breakpoints": true
     }
   ]
 }

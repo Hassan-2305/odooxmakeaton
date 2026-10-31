@@ -13,7 +13,8 @@ export function isTaxEffective(tax: TaxWindow, date: string): boolean {
 
 /** A tax rate as applied to a line: the snapshot written to invoice_line_taxes. */
 export interface AppliedRate {
-  taxId: string;
+  /** null when the tax row has since been deleted and only its snapshot remains. */
+  taxId: string | null;
   name: string;
   rateBps: number;
   inclusive: boolean;

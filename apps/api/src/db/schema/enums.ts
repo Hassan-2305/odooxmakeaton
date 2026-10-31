@@ -22,7 +22,8 @@ export const subscriptionStatus = pgEnum("subscription_status", [
 export const billingRunMode = pgEnum("billing_run_mode", ["scheduled", "manual"]);
 export const billingRunStatus = pgEnum("billing_run_status", ["running", "completed", "failed"]);
 export const billingRunItemOutcome = pgEnum("billing_run_item_outcome", [
-  "invoiced",
+  "created",
+  "already_billed",
   "skipped",
   "failed",
 ]);

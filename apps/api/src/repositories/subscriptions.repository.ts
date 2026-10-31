@@ -29,7 +29,7 @@ export interface NewSubscriptionLine {
   quantity: number;
   unitPricePaise: number;
   sortOrder: number;
-  taxes: { taxId: string; name: string; rateBps: number; inclusive: boolean }[];
+  taxes: { taxId: string | null; name: string; rateBps: number; inclusive: boolean }[];
 }
 
 export interface NewSubscriptionEvent {

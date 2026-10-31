@@ -54,7 +54,7 @@ export const BILLING_RUN_STATUSES = ["running", "completed", "failed"] as const;
 export const billingRunStatusSchema = z.enum(BILLING_RUN_STATUSES);
 export type BillingRunStatus = z.infer<typeof billingRunStatusSchema>;
 
-export const BILLING_RUN_ITEM_OUTCOMES = ["invoiced", "skipped", "failed"] as const;
+export const BILLING_RUN_ITEM_OUTCOMES = ["created", "already_billed", "skipped", "failed"] as const;
 export const billingRunItemOutcomeSchema = z.enum(BILLING_RUN_ITEM_OUTCOMES);
 export type BillingRunItemOutcome = z.infer<typeof billingRunItemOutcomeSchema>;
 
