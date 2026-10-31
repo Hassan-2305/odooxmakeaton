@@ -1,18 +1,24 @@
 import express from "express";
-import { createHealthRouter } from "./routes/health.routes.js";
-import type { HealthService } from "./services/health.service.js";
+import { type Logger, consoleLogger } from "./lib/logger.js";
+import { errorHandler, notFoundHandler } from "./middleware/error-handler.js";
+import { requestLogger } from "./middleware/request-logger.js";
+import { createApiRouter, type RouteDeps } from "./routes/index.js";
 
-export interface AppDeps {
-  healthService: HealthService;
+export interface AppDeps extends RouteDeps {
+  logger?: Logger;
 }
 
-export function createApp({ healthService }: AppDeps) {
+export function createApp({ logger = consoleLogger, ...deps }: AppDeps) {
   const app = express();
 
   app.disable("x-powered-by");
-  app.use(express.json());
+  app.use(requestLogger(logger));
+  app.use(express.json({ limit: "1mb" }));
 
-  app.use("/api/health", createHealthRouter(healthService));
+  app.use("/api", createApiRouter(deps));
+
+  app.use("/api", notFoundHandler);
+  app.use(errorHandler(logger));
 
   return app;
 }
