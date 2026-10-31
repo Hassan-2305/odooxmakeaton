@@ -1,13 +1,19 @@
 import express from "express";
 import request from "supertest";
-import { beforeEach, describe, expect, it } from "vitest";
+import { sql } from "drizzle-orm";
+import { afterAll, beforeEach, describe, expect, it } from "vitest";
 import { silentLogger } from "../lib/logger.js";
 import { errorHandler } from "../middleware/error-handler.js";
 import { scopeToCustomer } from "../middleware/scope.js";
+import type { DbOrTx } from "../repositories/audit.repository.js";
+import { createPortalRepository } from "../repositories/portal.repository.js";
+import { createPortalService } from "../services/portal.service.js";
+import { closeTestDb, dbAvailable, fixtures, inRollback } from "../test/db.js";
 import { signInAs } from "../test/sign-in.js";
 import { createTestApp } from "../test/test-app.js";
 
 let ctx: ReturnType<typeof createTestApp>;
+afterAll(closeTestDb);
 beforeEach(() => {
   ctx = createTestApp();
 });
@@ -70,4 +76,125 @@ describe("GET /api/portal/profile", () => {
 
     expect((await staff.get("/api/portal/profile")).status).toBe(403);
   });
+});
+
+describe.skipIf(!dbAvailable)("portal data isolation (Postgres)", () => {
+  /** Two customers with a subscription, invoices and a payment each; A and B signed in. */
+  async function setup(tx: DbOrTx) {
+    const app = createTestApp({ portalService: createPortalService({ repo: createPortalRepository(tx) }) });
+    const f = fixtures(tx);
+    const plan = await f.plan("month");
+
+    async function customerWithData(name: string) {
+      const customer = await f.customer(name);
+      const subscription = await f.subscription({
+        customerId: customer.id,
+        planId: plan.id,
+        lines: [{ quantity: 2, unitPricePaise: 5000 }],
+      });
+      await f.subscription({ customerId: customer.id, planId: plan.id, status: "draft" });
+      const invoice = await f.invoice({ customerId: customer.id, subscriptionId: subscription.id, totalPaise: 10000 });
+      const draft = await f.invoice({
+        customerId: customer.id,
+        subscriptionId: subscription.id,
+        status: "draft",
+        totalPaise: 10000,
+        periodStart: "2026-11-01",
+        periodEnd: "2026-12-01",
+      });
+      const payment = await f.payment({
+        customerId: customer.id,
+        amountPaise: 4000,
+        allocations: [{ invoiceId: invoice.id, amountPaise: 4000 }],
+      });
+      const agent = await signInAs(app.app, app.store, "customer");
+      app.store.users.get(agent.user!.id)!.customerId = customer.id;
+      // Mirror the in-memory user into Postgres so audit rows can reference it.
+      await tx.execute(sql`insert into users (id, email, password_hash, name, role, customer_id)
+        values (${agent.user!.id}::uuid, ${agent.user!.email}, 'x', ${name}, 'customer', ${customer.id}::uuid)`);
+      return { customer, subscription, invoice, draft, payment, agent };
+    }
+
+    return { app, a: await customerWithData("Customer A"), b: await customerWithData("Customer B") };
+  }
+
+  it("lists only the signed-in customer's own records, without drafts", () =>
+    inRollback(async (tx) => {
+      const { a } = await setup(tx);
+
+      const subs = await a.agent.get("/api/portal/subscriptions?customerId=" + a.customer.id);
+      expect(subs.status).toBe(200);
+      expect(subs.body.data).toEqual([
+        expect.objectContaining({ id: a.subscription.id, status: "active", recurringAmountPaise: 10000 }),
+      ]);
+
+      const invoices = await a.agent.get("/api/portal/invoices");
+      expect(invoices.body.data).toEqual([
+        expect.objectContaining({ id: a.invoice.id, totalPaise: 10000, paidPaise: 4000, balancePaise: 6000 }),
+      ]);
+
+      const payments = await a.agent.get("/api/portal/payments");
+      expect(payments.body.data).toEqual([
+        expect.objectContaining({
+          id: a.payment.id,
+          amountPaise: 4000,
+          allocations: [{ invoiceId: a.invoice.id, invoiceNumber: a.invoice.number, amountPaise: 4000 }],
+        }),
+      ]);
+    }));
+
+  it("returns 404 for another customer's invoice and its PDF", () =>
+    inRollback(async (tx) => {
+      const { a, b } = await setup(tx);
+
+      expect((await a.agent.get(`/api/portal/invoices/${b.invoice.id}`)).status).toBe(404);
+      expect((await a.agent.get(`/api/portal/invoices/${b.invoice.id}/pdf`)).status).toBe(404);
+      // Drafts are invisible too, even your own.
+      expect((await a.agent.get(`/api/portal/invoices/${a.draft.id}`)).status).toBe(404);
+
+      const own = await a.agent.get(`/api/portal/invoices/${a.invoice.id}`);
+      expect(own.status).toBe(200);
+      expect(own.body.invoice).toMatchObject({ id: a.invoice.id, balancePaise: 6000, lines: [] });
+      // The owner reaches the PDF stub.
+      expect((await a.agent.get(`/api/portal/invoices/${a.invoice.id}/pdf`)).status).toBe(501);
+    }));
+
+  it("stores a cancel request in the audit log, only for the customer's own subscription", () =>
+    inRollback(async (tx) => {
+      const { a, b } = await setup(tx);
+
+      const denied = await a.agent.post("/api/portal/requests", {
+        type: "cancel",
+        subscriptionId: b.subscription.id,
+        message: "Please cancel",
+      });
+      expect(denied.status).toBe(404);
+
+      const res = await a.agent.post("/api/portal/requests", {
+        type: "cancel",
+        subscriptionId: a.subscription.id,
+        message: "Please cancel at period end",
+      });
+      expect(res.status).toBe(202);
+      expect(res.body.request).toMatchObject({ type: "cancel", subscriptionId: a.subscription.id });
+
+      const { rows } = await tx.execute(
+        sql`select action, actor_user_id, after from audit_log where entity_id = ${a.subscription.id}::uuid`,
+      );
+      expect(rows).toEqual([
+        {
+          action: "portal.request.cancel",
+          actor_user_id: a.agent.user!.id,
+          after: { type: "cancel", message: "Please cancel at period end", customerId: a.customer.id, status: "pending" },
+        },
+      ]);
+    }));
+
+  it("returns 403 to back-office users", () =>
+    inRollback(async (tx) => {
+      const { app } = await setup(tx);
+      const staff = await signInAs(app.app, app.store, "staff");
+
+      expect((await staff.get("/api/portal/invoices")).status).toBe(403);
+    }));
 });

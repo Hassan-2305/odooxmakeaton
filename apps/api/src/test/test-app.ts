@@ -16,6 +16,7 @@ import {
   createFakeCustomersRepo,
   createFakeMailer,
 } from "./fakes.js";
+import { notWired } from "./not-wired.js";
 
 export const TEST_SECRET = "test-secret-that-is-at-least-32-characters";
 
@@ -58,6 +59,9 @@ export function createTestApp(overrides: Partial<AppDeps> = {}) {
     staffService: createStaffService({ users: store.usersRepo, hasher: testHasher }),
     customersService: createCustomersService({ customers: customers.repo }),
     auditService,
+    reportsService: notWired("reportsService"),
+    portalService: notWired("portalService"),
+    integrityService: notWired("integrityService"),
     authRateLimit: false,
     ...overrides,
   });

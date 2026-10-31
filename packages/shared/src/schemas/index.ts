@@ -12,3 +12,5 @@ export * from "./subscriptions.js";
 export * from "./billing.js";
 export * from "./payments.js";
 export * from "./findings.js";
+export * from "./reports.js";
+export * from "./portal.js";
