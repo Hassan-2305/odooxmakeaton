@@ -188,8 +188,14 @@ scans never overlap. Each rule returns one row per offending record:
 | Rule | Severity | Detects | Impact |
 | ---- | -------- | ------- | ------ |
 | `missing_invoice` | high | An active subscription whose next invoice date is more than a day past, with no non-cancelled invoice for that period | the period's amount |
-| `duplicate_invoice` | high | More than one non-cancelled invoice for the same subscription and period; the earliest is the original, each later one is a finding | the duplicate's total |
+| `duplicate_invoice` | high | A non-cancelled invoice whose billing period overlaps the period of an earlier non-cancelled invoice for the same subscription; the earliest is the original, each later one is a finding (recommended action: void the duplicate) | the duplicate's total |
 | `unallocated_payment` | medium | A payment whose allocations add up to less than its amount | the unallocated amount |
+
+Exact duplicates (same subscription, same `period_start`) can't exist at all: the
+`invoices_subscription_period_unique` constraint blocks them, which is also what makes billing
+runs idempotent. `duplicate_invoice` catches what the constraint can't: invoices whose periods
+overlap without starting on the same day, such as an invoice shifted by one day. Periods are
+compared as half-open ranges `[period_start, period_end)`, so back-to-back periods don't count.
 
 A finding is identified by `(rule, record)`, so rescans update it instead of creating
 copies. When the underlying problem goes away, the next scan resolves the finding on its own;
