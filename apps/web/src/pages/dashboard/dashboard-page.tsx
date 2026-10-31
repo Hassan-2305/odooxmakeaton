@@ -61,7 +61,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
   const { from, to, customerId } = filters;
   const s: ReportSummary | undefined = summary.data;
   const loading = summary.isPending;
-  // Target list routes read the same filter names from their query string.
+  // Each target list reads these filter names from its query string and sends them to its API.
   const link = (path: string, params: Record<string, string | undefined> = {}) =>
     withQuery(path, { ...params, customerId });
 
@@ -88,7 +88,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
         glossary="Total of confirmed and paid invoices issued between the from and to dates."
         value={s && formatMoney(s.invoicedPaise)}
         sub={s && `${formatDate(s.from)} – ${formatDate(s.to)}`}
-        to={link("/invoices", { status: "confirmed,paid", from, to })}
+        to={link("/invoices", { from, to })}
         loading={loading}
       />
       <KpiCard
@@ -104,7 +104,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
         glossary="Unpaid balance of every confirmed invoice as of today, whether due or not."
         value={s && formatMoney(s.outstandingPaise)}
         sub="Confirmed, unpaid"
-        to={link("/invoices", { status: "confirmed", unpaid: "true" })}
+        to={link("/invoices", { status: "confirmed" })}
         loading={loading}
       />
       <KpiCard
@@ -112,7 +112,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
         glossary="Confirmed invoices past their due date with a balance left to pay. Shows the count and the unpaid amount."
         value={s && formatMoney(s.overdue.amountPaise)}
         sub={s && `${formatCount(s.overdue.count)} invoice${s.overdue.count === 1 ? "" : "s"}`}
-        to={link("/invoices", { status: "confirmed", overdue: "true" })}
+        to={link("/invoices", { overdue: "true" })}
         loading={loading}
         tone={s && s.overdue.count > 0 ? "warning" : "default"}
       />

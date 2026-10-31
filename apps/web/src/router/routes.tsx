@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { createBrowserRouter, Navigate, type RouteObject } from "react-router";
 import { AppLayout } from "@/layouts/app-layout";
+import { BillingRunDetailPage } from "@/pages/billing-runs/billing-run-detail-page";
+import { BillingRunsPage } from "@/pages/billing-runs/billing-runs-page";
 import { AuthLayout } from "@/layouts/auth-layout";
 import { APP_NAV, PORTAL_NAV } from "@/layouts/nav";
 import { PortalLayout } from "@/layouts/portal-layout";
@@ -16,6 +18,9 @@ import { CustomerDetailPage } from "@/pages/customers/customer-detail-page";
 import { CustomersPage } from "@/pages/customers/customers-page";
 import { DashboardPage } from "@/pages/dashboard/dashboard-page";
 import { IntegrityPage } from "@/pages/integrity/integrity-page";
+import { InvoiceDetailPage } from "@/pages/invoices/invoice-detail-page";
+import { InvoicesPage } from "@/pages/invoices/invoices-page";
+import { PaymentsPage } from "@/pages/payments/payments-page";
 import { PortalInvoicesPage } from "@/pages/portal/portal-invoices-page";
 import { PortalOverviewPage } from "@/pages/portal/portal-overview-page";
 import { PortalPaymentsPage } from "@/pages/portal/portal-payments-page";
@@ -35,6 +40,9 @@ const SCREENS: Record<string, ReactNode> = {
   "/quotations": <QuotationsPage />,
   "/subscriptions": <SubscriptionsPage />,
   "/products": <ProductsPage />,
+  "/invoices": <InvoicesPage />,
+  "/payments": <PaymentsPage />,
+  "/billing-runs": <BillingRunsPage />,
   "/renewals": <RenewalsPage />,
   "/revenue-integrity": <IntegrityPage />,
   "/settings/audit": <AuditPage />,
@@ -59,6 +67,8 @@ const extraRoutes: RouteObject[] = [
       { path: "customers/:id", element: <CustomerDetailPage /> },
       { path: "products/:id", element: <ProductDetailPage /> },
       { path: "subscriptions/:id", element: <SubscriptionDetailPage /> },
+      { path: "invoices/:id", element: <InvoiceDetailPage /> },
+      { path: "billing-runs/:id", element: <BillingRunDetailPage /> },
     ],
   },
   {
