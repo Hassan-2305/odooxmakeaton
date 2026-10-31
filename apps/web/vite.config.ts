@@ -9,7 +9,10 @@ export default defineConfig({
     alias: { "@": path.resolve(import.meta.dirname, "./src") },
   },
   server: {
-    port: 5173,
-    proxy: { "/api": "http://localhost:4000" },
+    port: 3000,
+    strictPort: true,
+    proxy: { "/api": process.env.API_PROXY_TARGET ?? "http://localhost:4000" },
+    // Bind-mounted sources on Docker Desktop (Windows/macOS) don't emit fs events.
+    watch: process.env.VITE_USE_POLLING === "true" ? { usePolling: true, interval: 300 } : undefined,
   },
 });
