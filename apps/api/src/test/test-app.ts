@@ -60,6 +60,7 @@ export function createTestApp(overrides: Partial<AppDeps> = {}) {
     customersService: createCustomersService({ customers: customers.repo }),
     auditService,
     reportsService: notWired("reportsService"),
+    portalService: notWired("portalService"),
     authRateLimit: false,
     ...overrides,
   });

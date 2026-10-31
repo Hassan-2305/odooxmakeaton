@@ -6,6 +6,7 @@ import type { AuthService } from "../services/auth.service.js";
 import type { CustomersService } from "../services/customers.service.js";
 import type { HealthService } from "../services/health.service.js";
 import type { PasswordResetService } from "../services/password-reset.service.js";
+import type { PortalService } from "../services/portal.service.js";
 import type { ReportsService } from "../services/reports.service.js";
 import type { StaffService } from "../services/staff.service.js";
 import { createAuditRouter } from "./audit.routes.js";
@@ -25,6 +26,7 @@ export interface RouteDeps {
   customersService: CustomersService;
   auditService: AuditService;
   reportsService: ReportsService;
+  portalService: PortalService;
   eventBus: EventBus;
   csrf: Csrf;
   secureCookies: boolean;
@@ -52,7 +54,7 @@ export function createApiRouter(deps: RouteDeps) {
   api.use("/staff", createStaffRouter({ staffService: deps.staffService }));
   api.use("/customers", createCustomersRouter({ customersService: deps.customersService }));
   api.use("/audit", createAuditRouter({ auditService: deps.auditService }));
-  api.use("/portal", createPortalRouter({ customersService: deps.customersService }));
+  api.use("/portal", createPortalRouter(deps));
   api.use("/events", createEventsRouter(deps.eventBus));
   api.use("/reports", createReportsRouter(deps));
 
