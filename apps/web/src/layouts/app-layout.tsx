@@ -2,7 +2,9 @@ import type { AuthUser } from "@brightloop/shared";
 import { MenuIcon } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router";
+import { LiveIndicator } from "@/components/live-indicator";
 import { Button } from "@/components/ui/button";
+import { useSSE } from "@/hooks/use-sse";
 import { Dialog, DialogDescription, DialogTitle, SheetContent } from "@/components/ui/dialog";
 import { useRequiredUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
@@ -50,6 +52,7 @@ function SidebarNav({ user, onNavigate }: { user: AuthUser; onNavigate?: () => v
 export function AppLayout() {
   const user = useRequiredUser();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const live = useSSE();
 
   return (
     <div className="min-h-svh md:grid md:grid-cols-[16rem_1fr]">
@@ -58,7 +61,8 @@ export function AppLayout() {
           <Brand to="/dashboard" />
         </div>
         <SidebarNav user={user} />
-        <div className="border-t p-3">
+        <div className="space-y-2 border-t p-3">
+          <LiveIndicator status={live} className="px-1" />
           <UserMenu user={user} />
         </div>
       </aside>

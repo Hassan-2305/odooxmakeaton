@@ -1,4 +1,5 @@
 import { NavLink, Outlet } from "react-router";
+import { useSSE } from "@/hooks/use-sse";
 import { useRequiredUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PORTAL_NAV } from "./nav";
@@ -7,6 +8,8 @@ import { Brand, UserMenu } from "./shell-parts";
 /** Customer portal shell: top bar with the nav; it scrolls sideways on small screens. */
 export function PortalLayout() {
   const user = useRequiredUser();
+  // Keeps invoices/payments fresh; the queries themselves stay customer-scoped by the API.
+  useSSE();
 
   return (
     <div className="min-h-svh">
