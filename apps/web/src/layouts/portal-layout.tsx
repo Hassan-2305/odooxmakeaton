@@ -1,61 +1,89 @@
+import type { AuthUser } from "@brightloop/shared";
+import { MenuIcon } from "lucide-react";
+import { useState } from "react";
 import { NavLink, Outlet } from "react-router";
+import { Button } from "@/components/ui/button";
+import { Dialog, DialogDescription, DialogTitle, SheetContent } from "@/components/ui/dialog";
 import { useSSE } from "@/hooks/use-sse";
 import { useRequiredUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PORTAL_NAV } from "./nav";
 import { Brand, UserMenu } from "./shell-parts";
 
-/** Customer portal shell: top bar with the nav; it scrolls sideways on small screens. */
-export function PortalLayout() {
-  const user = useRequiredUser();
-  // Keeps invoices/payments fresh; the queries themselves stay customer-scoped by the API.
-  useSSE();
-
+function PortalLinks({ onNavigate }: { onNavigate?: () => void }) {
   return (
-    <div className="min-h-svh">
-      <header className="sticky top-0 z-30 border-b bg-background">
-        <div className="mx-auto flex h-14 max-w-6xl items-center gap-6 px-4">
-          <Brand to="/portal" />
-          <nav aria-label="Portal" className="hidden flex-1 md:block">
-            <PortalLinks />
-          </nav>
-          <div className="ml-auto md:ml-0">
-            <UserMenu user={user} />
-          </div>
-        </div>
-        <nav aria-label="Portal" className="overflow-x-auto border-t px-2 md:hidden">
-          <PortalLinks />
-        </nav>
-      </header>
-      <main className="mx-auto max-w-6xl px-4 py-6">
-        <Outlet />
-      </main>
-    </div>
-  );
-}
-
-function PortalLinks() {
-  return (
-    <ul className="flex gap-1 whitespace-nowrap">
+    <ul className="space-y-1">
       {PORTAL_NAV.map(({ label, to, icon: Icon }) => (
         <li key={to}>
           <NavLink
             to={to}
             end={to === "/portal"}
+            onClick={onNavigate}
             className={({ isActive }) =>
               cn(
-                "flex items-center gap-1.5 border-b-2 px-3 py-3 text-sm transition-colors md:py-[1.0625rem]",
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? "border-primary font-medium text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
+                  ? "bg-accent font-medium text-accent-foreground"
+                  : "text-foreground/75 hover:bg-surface hover:text-foreground",
               )
             }
           >
-            <Icon className="size-4" aria-hidden />
+            <Icon className="size-[1.05rem] shrink-0" aria-hidden />
             {label}
           </NavLink>
         </li>
       ))}
     </ul>
+  );
+}
+
+function PortalSidebar({ user, onNavigate }: { user: AuthUser; onNavigate?: () => void }) {
+  return (
+    <div className="flex h-full flex-col bg-white">
+      <div className="flex h-16 items-center px-5">
+        <Brand to="/portal" />
+      </div>
+      <nav aria-label="Portal" className="flex-1 overflow-y-auto px-3 py-4">
+        <PortalLinks onNavigate={onNavigate} />
+      </nav>
+      <div className="border-t p-3">
+        <UserMenu user={user} />
+      </div>
+    </div>
+  );
+}
+
+/** Customer portal shell: light sidebar on ≥768px, drawer below. */
+export function PortalLayout() {
+  const user = useRequiredUser();
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  // Keeps invoices/payments fresh; the queries themselves stay customer-scoped by the API.
+  useSSE();
+
+  return (
+    <div className="min-h-svh md:grid md:grid-cols-[15.5rem_1fr]">
+      <aside className="sticky top-0 hidden h-svh border-r md:block">
+        <PortalSidebar user={user} />
+      </aside>
+
+      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-white/85 px-4 backdrop-blur-md md:hidden">
+        <Button variant="ghost" size="icon-sm" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
+          <MenuIcon />
+        </Button>
+        <Brand to="/portal" />
+      </header>
+
+      <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
+        <SheetContent className="bg-white">
+          <DialogTitle className="sr-only">Navigation</DialogTitle>
+          <DialogDescription className="sr-only">Portal navigation</DialogDescription>
+          <PortalSidebar user={user} onNavigate={() => setDrawerOpen(false)} />
+        </SheetContent>
+      </Dialog>
+
+      <main className="mx-auto w-full max-w-7xl min-w-0 px-4 py-6 md:px-8 md:py-8">
+        <Outlet />
+      </main>
+    </div>
   );
 }

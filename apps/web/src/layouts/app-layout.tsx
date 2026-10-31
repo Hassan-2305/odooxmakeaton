@@ -9,19 +9,19 @@ import { Dialog, DialogDescription, DialogTitle, SheetContent } from "@/componen
 import { useRequiredUser } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { navForRole } from "./nav";
-import { Brand, UserMenu } from "./shell-parts";
+import { Avatar, Brand, UserMenu } from "./shell-parts";
 
 function SidebarNav({ user, onNavigate }: { user: AuthUser; onNavigate?: () => void }) {
   return (
-    <nav aria-label="Main" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+    <nav aria-label="Main" className="scrollbar-thin flex-1 space-y-6 overflow-y-auto px-3 py-5">
       {navForRole(user.role).map((group, gi) => (
         <div key={group.label ?? gi}>
           {group.label && (
-            <p className="mb-1 px-2 text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+            <p className="mb-2 px-3 text-[0.68rem] font-semibold tracking-[0.12em] text-sidebar-muted uppercase">
               {group.label}
             </p>
           )}
-          <ul className="space-y-0.5">
+          <ul className="space-y-1">
             {group.items.map(({ label, to, icon: Icon }) => (
               <li key={to}>
                 <NavLink
@@ -29,15 +29,25 @@ function SidebarNav({ user, onNavigate }: { user: AuthUser; onNavigate?: () => v
                   onClick={onNavigate}
                   className={({ isActive }) =>
                     cn(
-                      "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-sm transition-colors",
+                      "relative flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                       isActive
-                        ? "bg-accent font-medium text-accent-foreground"
-                        : "text-foreground/80 hover:bg-background hover:text-foreground",
+                        ? "bg-gradient-to-r from-orange-500/25 to-orange-500/5 font-medium text-white"
+                        : "text-sidebar-foreground hover:bg-white/5 hover:text-white",
                     )
                   }
                 >
-                  <Icon className="size-4 shrink-0" aria-hidden />
-                  {label}
+                  {({ isActive }) => (
+                    <>
+                      {isActive && (
+                        <span className="absolute inset-y-1.5 left-0 w-[3px] rounded-full bg-orange-500" aria-hidden />
+                      )}
+                      <Icon
+                        className={cn("size-[1.05rem] shrink-0", isActive ? "text-orange-400" : "opacity-80")}
+                        aria-hidden
+                      />
+                      {label}
+                    </>
+                  )}
                 </NavLink>
               </li>
             ))}
@@ -48,52 +58,71 @@ function SidebarNav({ user, onNavigate }: { user: AuthUser; onNavigate?: () => v
   );
 }
 
-/** Back-office shell: grouped sidebar on ≥768px, a slide-in drawer below. */
+function SidebarBody({ user, onNavigate }: { user: AuthUser; onNavigate?: () => void }) {
+  return (
+    <div className="flex h-full flex-col bg-gradient-to-b from-[#121b31] to-[#0a1120] text-sidebar-foreground">
+      <div className="flex h-16 items-center px-5 text-white">
+        <Brand to="/dashboard" />
+      </div>
+      <SidebarNav user={user} onNavigate={onNavigate} />
+      <div className="border-t border-sidebar-border p-3">
+        <UserMenu user={user} dark />
+      </div>
+    </div>
+  );
+}
+
+/** Back-office shell: navy sidebar on ≥768px, a slide-in drawer below, and a slim top bar. */
 export function AppLayout() {
   const user = useRequiredUser();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const live = useSSE();
 
   return (
-    <div className="min-h-svh md:grid md:grid-cols-[16rem_1fr]">
-      <aside className="sticky top-0 hidden h-svh flex-col border-r bg-surface md:flex">
-        <div className="flex h-14 items-center border-b px-4">
-          <Brand to="/dashboard" />
-        </div>
-        <SidebarNav user={user} />
-        <div className="space-y-2 border-t p-3">
-          <LiveIndicator status={live} className="px-1" />
-          <UserMenu user={user} />
-        </div>
+    <div className="min-h-svh md:grid md:grid-cols-[16.5rem_1fr]">
+      <aside className="sticky top-0 hidden h-svh md:block">
+        <SidebarBody user={user} />
       </aside>
 
-      <header className="sticky top-0 z-30 flex h-14 items-center gap-3 border-b bg-background px-4 md:hidden">
-        <Button variant="ghost" size="icon-sm" aria-label="Open menu" onClick={() => setDrawerOpen(true)}>
-          <MenuIcon />
-        </Button>
-        <Brand to="/dashboard" />
-        <div className="ml-auto">
-          <UserMenu user={user} compact />
-        </div>
-      </header>
-
       <Dialog open={drawerOpen} onOpenChange={setDrawerOpen}>
-        <SheetContent>
+        <SheetContent className="bg-sidebar">
           <DialogTitle className="sr-only">Navigation</DialogTitle>
           <DialogDescription className="sr-only">Main navigation</DialogDescription>
-          <div className="flex h-14 items-center border-b px-4">
-            <Brand to="/dashboard" />
-          </div>
-          <SidebarNav user={user} onNavigate={() => setDrawerOpen(false)} />
-          <div className="border-t p-3">
-            <UserMenu user={user} />
-          </div>
+          <SidebarBody user={user} onNavigate={() => setDrawerOpen(false)} />
         </SheetContent>
       </Dialog>
 
-      <main className="min-w-0 px-4 py-6 md:px-8">
-        <Outlet />
-      </main>
+      <div className="flex min-w-0 flex-col">
+        <header className="sticky top-0 z-30 flex h-16 items-center gap-3 border-b border-border/70 bg-white/80 px-4 backdrop-blur-md md:px-8">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            className="md:hidden"
+            aria-label="Open menu"
+            onClick={() => setDrawerOpen(true)}
+          >
+            <MenuIcon />
+          </Button>
+          <Brand to="/dashboard" className="md:hidden" />
+          <div className="ml-auto flex items-center gap-4">
+            <LiveIndicator
+              status={live}
+              className="hidden rounded-full border bg-white px-3 py-1 shadow-xs sm:inline-flex"
+            />
+            <div className="flex items-center gap-2.5">
+              <div className="hidden text-right leading-tight lg:block">
+                <p className="text-sm font-semibold">{user.name}</p>
+                <p className="text-xs text-muted-foreground capitalize">{user.role}</p>
+              </div>
+              <Avatar name={user.name} />
+            </div>
+          </div>
+        </header>
+
+        <main className="mx-auto w-full max-w-[90rem] min-w-0 flex-1 px-4 py-7 md:px-8">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

@@ -126,7 +126,7 @@ function PlanFormDialog({ open, onOpenChange, plan }: { open: boolean; onOpenCha
           <Input type="date" {...form.register("availableTo", nullDate)} />
         </FormField>
       </div>
-      <div className="grid gap-3 rounded-md border p-3 sm:grid-cols-2">
+      <div className="grid gap-3 rounded-xl border bg-surface/60 p-4 sm:grid-cols-2">
         <CheckField label="Auto-close at end of term" hint="Billing closes it once the expiry date passes." {...form.register("autoCloseOnEnd")} />
         <CheckField label="Closable early" hint="Can be closed before its expiry date." {...form.register("closableEarly")} />
         <CheckField label="Pausable" hint="Can be paused and resumed." {...form.register("pausable")} />

@@ -12,11 +12,12 @@ export function RunCounters({ run }: { run: BillingRun }) {
     { label: "Failed", value: run.failedCount, tone: run.failedCount ? "text-status-overdue" : undefined },
   ];
   return (
-    <div className="grid grid-cols-2 gap-2 sm:grid-cols-5" aria-live="polite">
+    <div className="grid grid-cols-2 gap-3 sm:grid-cols-5" aria-live="polite">
       {tiles.map((t) => (
-        <div key={t.label} className="rounded-lg border bg-card p-3">
-          <p className="text-xs text-muted-foreground">{t.label}</p>
-          <p className={cn("text-xl font-semibold tabular-nums", t.tone)}>{formatCount(t.value)}</p>
+        <div key={t.label} className="card-surface relative overflow-hidden p-4">
+          <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 opacity-70" aria-hidden />
+          <p className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{t.label}</p>
+          <p className={cn("mt-1 text-2xl font-bold tabular-nums", t.tone)}>{formatCount(t.value)}</p>
         </div>
       ))}
     </div>

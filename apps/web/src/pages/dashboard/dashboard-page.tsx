@@ -1,6 +1,16 @@
 import { AGING_BUCKETS, type AgingBucket, type ReportSummary } from "@brightloop/shared";
 import { useQueryClient } from "@tanstack/react-query";
-import { RefreshCwIcon } from "lucide-react";
+import {
+  AlertTriangleIcon,
+  BadgeIndianRupeeIcon,
+  FileTextIcon,
+  PercentIcon,
+  RefreshCwIcon,
+  RepeatIcon,
+  ShieldAlertIcon,
+  TrendingUpIcon,
+  WalletIcon,
+} from "lucide-react";
 import { useState } from "react";
 import {
   Area,
@@ -40,6 +50,12 @@ import { KpiCard } from "./kpi-card";
 const money = (v: unknown) => formatMoney(Number(v));
 const axisMoney = (v: number) => formatMoneyCompact(v);
 const axisTick = { fontSize: 12, fill: colors["muted-foreground"] };
+const tooltipStyle = {
+  borderRadius: 10,
+  border: `1px solid ${colors.border}`,
+  boxShadow: "0 8px 24px -8px rgb(15 23 42 / 0.15)",
+  fontSize: 12,
+};
 
 const AGING_COLORS: Record<AgingBucket, string> = {
   current: statusColors.paid.solid,
@@ -66,9 +82,10 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
     withQuery(path, { ...params, customerId });
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard
         label="Active subscriptions"
+        icon={RepeatIcon} accent="blue"
         glossary="Subscriptions in the active state right now. Not limited to the date range."
         value={s && formatCount(s.activeSubscriptions)}
         sub="As of today"
@@ -77,6 +94,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       />
       <KpiCard
         label="MRR"
+        icon={TrendingUpIcon} accent="green"
         glossary="Monthly recurring revenue: every active subscription's recurring amount converted to a monthly figure, before tax and discounts."
         value={s && formatMoney(s.mrrPaise)}
         sub="Monthly, pre-tax"
@@ -85,6 +103,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       />
       <KpiCard
         label="Invoiced"
+        icon={FileTextIcon} accent="violet"
         glossary="Total of confirmed and paid invoices issued between the from and to dates."
         value={s && formatMoney(s.invoicedPaise)}
         sub={s && `${formatDate(s.from)} – ${formatDate(s.to)}`}
@@ -93,6 +112,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       />
       <KpiCard
         label="Collected"
+        icon={WalletIcon} accent="cyan"
         glossary="Payment amounts applied to invoices, for payments received between the from and to dates."
         value={s && formatMoney(s.collectedPaise)}
         sub={s && `${formatDate(s.from)} – ${formatDate(s.to)}`}
@@ -101,6 +121,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       />
       <KpiCard
         label="Outstanding"
+        icon={BadgeIndianRupeeIcon} accent="amber"
         glossary="Unpaid balance of every confirmed invoice as of today, whether due or not."
         value={s && formatMoney(s.outstandingPaise)}
         sub="Confirmed, unpaid"
@@ -109,6 +130,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       />
       <KpiCard
         label="Overdue"
+        icon={AlertTriangleIcon} accent="red"
         glossary="Confirmed invoices past their due date with a balance left to pay. Shows the count and the unpaid amount."
         value={s && formatMoney(s.overdue.amountPaise)}
         sub={s && `${formatCount(s.overdue.count)} invoice${s.overdue.count === 1 ? "" : "s"}`}
@@ -118,12 +140,23 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       />
       <KpiCard
         label="Open findings"
+        icon={ShieldAlertIcon} accent="orange"
         glossary="Revenue integrity findings still waiting for review: missing invoices, duplicate invoices and unallocated payments."
         value={s && formatCount(s.openFindings)}
         sub="Revenue integrity"
         to={link("/revenue-integrity", { status: "open" })}
         loading={loading}
         tone={s && s.openFindings > 0 ? "warning" : "default"}
+      />
+      <KpiCard
+        label="Collection rate"
+        icon={PercentIcon}
+        accent="green"
+        glossary="Collected as a share of Invoiced for the selected date range."
+        value={s && (s.invoicedPaise > 0 ? `${Math.round((s.collectedPaise / s.invoicedPaise) * 100)}%` : "—")}
+        sub="Collected ÷ invoiced"
+        to={link("/payments", { from, to })}
+        loading={loading}
       />
     </div>
   );
@@ -144,26 +177,36 @@ function CollectionsChart({ filters }: { filters: ReportFilters }) {
       {(d) => (
         <ResponsiveContainer width="100%" height="100%">
           <AreaChart data={d.series} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
-            <XAxis dataKey="date" tickFormatter={formatShortDate} tick={axisTick} minTickGap={24} />
-            <YAxis tickFormatter={axisMoney} tick={axisTick} width={64} />
-            <Tooltip formatter={money} labelFormatter={(l) => formatDate(String(l))} />
-            <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
+            <defs>
+              <linearGradient id="fillCollected" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor={colors.primary} stopOpacity={0.35} />
+                <stop offset="100%" stopColor={colors.primary} stopOpacity={0.02} />
+              </linearGradient>
+              <linearGradient id="fillReceived" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#3b82f6" stopOpacity={0.22} />
+                <stop offset="100%" stopColor="#3b82f6" stopOpacity={0.01} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="4 4" stroke={colors.border} vertical={false} />
+            <XAxis dataKey="date" tickFormatter={formatShortDate} tick={axisTick} minTickGap={24} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={axisMoney} tick={axisTick} width={64} axisLine={false} tickLine={false} />
+            <Tooltip formatter={money} labelFormatter={(l) => formatDate(String(l))} contentStyle={tooltipStyle} />
+            <Legend iconType="circle" verticalAlign="top" align="right" height={28} wrapperStyle={{ fontSize: 12 }} />
             <Area
               type="monotone"
               dataKey="receivedPaise"
               name="Received"
-              stroke={statusColors.draft.solid}
-              fill={statusColors.draft.bg}
-              strokeWidth={1.5}
+              stroke="#3b82f6"
+              fill="url(#fillReceived)"
+              strokeWidth={2}
             />
             <Area
               type="monotone"
               dataKey="collectedPaise"
               name="Collected"
               stroke={colors.primary}
-              fill={colors.accent}
-              strokeWidth={2}
+              fill="url(#fillCollected)"
+              strokeWidth={2.5}
             />
           </AreaChart>
         </ResponsiveContainer>
@@ -188,18 +231,47 @@ function StatusMixChart({ summary }: { summary: ReturnType<typeof useSummary> })
           { name: "Outstanding, not due", value: notDue, color: statusColors["due-soon"].solid },
           { name: "Overdue", value: s.overdue.amountPaise, color: statusColors.overdue.solid },
         ].filter((x) => x.value > 0);
+        const total = slices.reduce((sum, x) => sum + x.value, 0);
         return (
-          <ResponsiveContainer width="100%" height="100%">
-            <PieChart>
-              <Pie data={slices} dataKey="value" nameKey="name" innerRadius="55%" outerRadius="80%" paddingAngle={2}>
-                {slices.map((x) => (
-                  <Cell key={x.name} fill={x.color} />
-                ))}
-              </Pie>
-              <Tooltip formatter={money} />
-              <Legend iconType="circle" wrapperStyle={{ fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
+          <div className="flex h-full flex-col">
+            <div className="relative min-h-0 flex-1">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={slices}
+                    dataKey="value"
+                    nameKey="name"
+                    innerRadius="68%"
+                    outerRadius="92%"
+                    paddingAngle={2}
+                    cornerRadius={4}
+                    stroke="none"
+                  >
+                    {slices.map((x) => (
+                      <Cell key={x.name} fill={x.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip formatter={money} contentStyle={tooltipStyle} />
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-lg font-bold tabular-nums">{formatMoneyCompact(total)}</span>
+                <span className="text-xs text-muted-foreground">tracked</span>
+              </div>
+            </div>
+            <ul className="mt-3 space-y-1.5 text-xs">
+              {slices.map((x) => (
+                <li key={x.name} className="flex items-center gap-2">
+                  <span className="size-2.5 rounded-full" style={{ background: x.color }} aria-hidden />
+                  <span className="text-muted-foreground">{x.name}</span>
+                  <span className="ml-auto font-medium tabular-nums">
+                    {formatMoney(x.value)}{" "}
+                    <span className="text-muted-foreground">({Math.round((x.value / total) * 100)}%)</span>
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
         );
       }}
     </ChartCard>
@@ -226,16 +298,18 @@ function AgingChart({ filters }: { filters: ReportFilters }) {
         return (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={rows} margin={{ top: 4, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} vertical={false} />
-              <XAxis dataKey="label" tick={axisTick} />
-              <YAxis tickFormatter={axisMoney} tick={axisTick} width={64} />
+              <CartesianGrid strokeDasharray="4 4" stroke={colors.border} vertical={false} />
+              <XAxis dataKey="label" tick={axisTick} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={axisMoney} tick={axisTick} width={64} axisLine={false} tickLine={false} />
               <Tooltip
+                contentStyle={tooltipStyle}
+                cursor={{ fill: colors.muted }}
                 formatter={(v, _n, item) => [
                   `${money(v)} · ${formatCount((item.payload as { count: number }).count)} invoices`,
                   "Unpaid",
                 ]}
               />
-              <Bar dataKey="amountPaise" name="Unpaid" radius={[4, 4, 0, 0]}>
+              <Bar dataKey="amountPaise" name="Unpaid" radius={[8, 8, 0, 0]} maxBarSize={56}>
                 {rows.map((r) => (
                   <Cell key={r.bucket} fill={AGING_COLORS[r.bucket]} />
                 ))}
@@ -271,7 +345,7 @@ export function DashboardPage() {
     <>
       <PageHeader
         title="Dashboard"
-        description="Billing, collections and revenue health at a glance."
+        description="Account health, revenue and collections at a glance."
         actions={
           <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={refreshing || !!filters.rangeError}>
             <RefreshCwIcon className={refreshing ? "animate-spin" : undefined} /> Refresh
@@ -279,7 +353,7 @@ export function DashboardPage() {
         }
       />
 
-      <div className="mb-4 flex flex-wrap items-end gap-2">
+      <div className="glass-surface mb-5 flex flex-wrap items-end gap-3 p-4">
         <label className="grid gap-1 text-xs text-muted-foreground">
           From
           <Input
@@ -314,7 +388,7 @@ export function DashboardPage() {
       {filters.rangeError ? (
         <FormAlert className="mb-4">{filters.rangeError}</FormAlert>
       ) : summary.isError ? (
-        <div className="rounded-lg border bg-card">
+        <div className="card-surface">
           <ErrorState title="Couldn't load the dashboard" error={summary.error} onRetry={() => void summary.refetch()} />
         </div>
       ) : (

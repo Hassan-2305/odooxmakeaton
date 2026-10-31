@@ -33,7 +33,7 @@ export function PortalProfilePage() {
     <>
       <PageHeader title="Profile" description="The details we bill against. Contact us to update them." />
       <div className="grid gap-4 lg:grid-cols-3">
-        <section className="rounded-lg border bg-card p-5 lg:col-span-2" aria-label="Billing details">
+        <section className="card-surface p-5 lg:col-span-2" aria-label="Billing details">
           <h2 className="mb-2 font-medium">Billing details</h2>
           {profile.isPending ? (
             <div className="space-y-3" role="status" aria-label="Loading profile">
@@ -60,14 +60,14 @@ export function PortalProfilePage() {
           )}
         </section>
         <aside className="space-y-4">
-          <section className="rounded-lg border bg-card p-5" aria-label="Sign-in">
+          <section className="card-surface p-5" aria-label="Sign-in">
             <h2 className="mb-2 font-medium">Sign-in</h2>
             <dl>
               <Row label="Name" value={user.name} />
               <Row label="Email" value={user.email} />
             </dl>
           </section>
-          <section className="rounded-lg border bg-card p-5">
+          <section className="card-surface p-5">
             <h2 className="font-medium">Need something changed?</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Ask to change or cancel a subscription and our team will follow up.

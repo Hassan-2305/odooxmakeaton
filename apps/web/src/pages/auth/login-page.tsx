@@ -30,7 +30,7 @@ export function LoginPage() {
 
   return (
     <>
-      <AuthHeading title="Sign in" description="Welcome back to Brightloop One." />
+      <AuthHeading title="Sign in" description="Welcome back to Recurra." />
       <form onSubmit={onSubmit} noValidate className="grid gap-4">
         <FormAlert>{errors.root?.server?.message}</FormAlert>
         <FormField label="Email" error={errors.email}>

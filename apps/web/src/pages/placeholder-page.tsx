@@ -7,7 +7,7 @@ export function PlaceholderPage({ title, description }: { title: string; descrip
   return (
     <>
       <PageHeader title={title} description={description} />
-      <div className="rounded-lg border bg-card">
+      <div className="card-surface">
         <EmptyState icon={ConstructionIcon} title="Coming soon" description={`The ${title} screen is on its way.`} />
       </div>
     </>

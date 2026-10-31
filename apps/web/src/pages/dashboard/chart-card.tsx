@@ -22,13 +22,13 @@ interface ChartCardProps<T> {
 export function ChartCard<T>({ title, glossary, query, isEmpty, emptyText, aside, children, className }: ChartCardProps<T>) {
   const { data, isPending, isError, error, refetch } = query;
   return (
-    <section className={cn("flex flex-col rounded-lg border bg-card p-4", className)} aria-label={title}>
-      <header className="mb-3 flex items-center gap-1.5">
-        <h2 className="text-sm font-medium">{title}</h2>
+    <section className={cn("card-surface flex flex-col p-5", className)} aria-label={title}>
+      <header className="mb-4 flex items-center gap-1.5">
+        <h2 className="text-base font-semibold">{title}</h2>
         <GlossaryTip term={title}>{glossary}</GlossaryTip>
         {data !== undefined && aside && <div className="ml-auto text-xs text-muted-foreground">{aside(data)}</div>}
       </header>
-      <div className="h-64">
+      <div className="h-72">
         {isPending ? (
           <div className="h-full animate-pulse rounded-md bg-muted" role="status" aria-label={`Loading ${title}`} />
         ) : isError ? (

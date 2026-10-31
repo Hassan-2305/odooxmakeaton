@@ -81,9 +81,9 @@ export function DataTable<T>({
 
   return (
     <div className={cn("space-y-3", className)}>
-      {filters && <div className="flex flex-wrap items-end gap-2 [&>*]:max-sm:w-full">{filters}</div>}
+      {filters && <div className="glass-surface flex flex-wrap items-end gap-2 p-3 [&>*]:max-sm:w-full">{filters}</div>}
 
-      <div className="overflow-hidden rounded-lg border bg-card">
+      <div className="card-surface overflow-hidden">
         {/* Under 640px each row becomes a card. */}
         <div className={cn("sm:hidden", isFetching && isPlaceholderData && "opacity-60")}>
           {isPending ? (
@@ -126,7 +126,7 @@ export function DataTable<T>({
 
         <div className="hidden overflow-x-auto sm:block">
           <table className={cn("w-full text-sm", isFetching && isPlaceholderData && "opacity-60")}>
-            <thead className="bg-surface text-muted-foreground">
+            <thead className="bg-surface text-xs text-muted-foreground">
               <tr className="border-b">
                 {columns.map((col) => {
                   const sorted = col.sortField && current?.field === col.sortField ? current.dir : null;
@@ -135,7 +135,7 @@ export function DataTable<T>({
                       key={col.id}
                       scope="col"
                       aria-sort={sorted === "asc" ? "ascending" : sorted === "desc" ? "descending" : undefined}
-                      className={cn("h-10 px-3 font-medium whitespace-nowrap", alignClass(col.align), col.className)}
+                      className={cn("h-11 px-4 font-semibold whitespace-nowrap", alignClass(col.align), col.className)}
                     >
                       {col.sortField ? (
                         <button
@@ -165,7 +165,7 @@ export function DataTable<T>({
                 Array.from({ length: 5 }, (_, i) => (
                   <tr key={i} className="border-b last:border-0">
                     {columns.map((col) => (
-                      <td key={col.id} className="px-3 py-3">
+                      <td key={col.id} className="px-4 py-3.5">
                         <div className="h-4 animate-pulse rounded bg-muted" />
                       </td>
                     ))}
@@ -187,12 +187,12 @@ export function DataTable<T>({
                     key={rowKey(row)}
                     onClick={onRowClick ? () => onRowClick(row) : undefined}
                     className={cn(
-                      "border-b transition-colors last:border-0 hover:bg-surface/60",
+                      "border-b border-border/70 transition-colors last:border-0 hover:bg-orange-50/40",
                       onRowClick && "cursor-pointer",
                     )}
                   >
                     {columns.map((col) => (
-                      <td key={col.id} className={cn("px-3 py-2.5", alignClass(col.align), col.className)}>
+                      <td key={col.id} className={cn("px-4 py-3", alignClass(col.align), col.className)}>
                         {col.cell(row)}
                       </td>
                     ))}
@@ -203,7 +203,7 @@ export function DataTable<T>({
           </table>
         </div>
 
-        <div className="flex flex-col gap-2 border-t bg-surface px-3 py-2 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-2 border-t bg-white px-4 py-3 text-sm text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
           <p aria-live="polite">
             {data ? (
               <>
@@ -221,7 +221,7 @@ export function DataTable<T>({
               <select
                 value={list.pageSize}
                 onChange={(e) => list.setPageSize(Number(e.target.value))}
-                className="h-8 rounded-md border border-input bg-background px-2 text-foreground"
+                className="h-8 rounded-lg border border-input bg-white px-2 text-foreground"
               >
                 {PAGE_SIZE_OPTIONS.map((n) => (
                   <option key={n} value={n}>

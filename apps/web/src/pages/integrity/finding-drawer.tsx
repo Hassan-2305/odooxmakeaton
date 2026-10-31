@@ -155,7 +155,7 @@ function DrawerBody({ finding, events }: { finding: IntegrityFinding; events: In
         {info && <p className="text-sm text-muted-foreground">{info.description}</p>}
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <div className="rounded-lg border bg-card p-3">
+          <div className="card-surface p-3">
             <p className="flex items-center gap-1 text-xs text-muted-foreground">
               Estimated impact
               <GlossaryTip term="Estimated impact">
@@ -165,7 +165,7 @@ function DrawerBody({ finding, events }: { finding: IntegrityFinding; events: In
             </p>
             <p className="mt-1 text-xl font-semibold tabular-nums">{formatMoney(finding.impactPaise)}</p>
           </div>
-          <div className="rounded-lg border bg-card p-3">
+          <div className="card-surface p-3">
             <p className="text-xs text-muted-foreground">Confirmed impact</p>
             <p className="mt-1 text-xl font-semibold tabular-nums">
               {finding.confirmedImpactPaise === null ? (

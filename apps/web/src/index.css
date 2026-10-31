@@ -32,6 +32,14 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.06);
 
   --color-status-paid: var(--status-paid);
   --color-status-paid-bg: var(--status-paid-bg);
@@ -52,6 +60,50 @@
     @apply border-border outline-ring/50;
   }
   body {
-    @apply bg-background text-foreground antialiased;
+    @apply bg-background font-sans text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+  h1, h2, h3 {
+    letter-spacing: -0.015em;
+  }
+
+  /*
+   * Ambient backdrop behind every screen: soft orange/indigo glows plus a faint dot grid
+   * that fades out toward the bottom. Fixed, so it stays put while content scrolls.
+   */
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+  body::before {
+    background:
+      radial-gradient(42rem 28rem at 100% -6%, rgb(249 115 22 / 0.13), transparent 70%),
+      radial-gradient(36rem 26rem at 18% 0%, rgb(99 102 241 / 0.08), transparent 70%),
+      radial-gradient(40rem 30rem at 0% 100%, rgb(14 165 233 / 0.07), transparent 70%),
+      radial-gradient(30rem 24rem at 85% 95%, rgb(249 115 22 / 0.06), transparent 70%);
+  }
+  body::after {
+    background-image: radial-gradient(rgb(15 23 42 / 0.07) 1px, transparent 1px);
+    background-size: 22px 22px;
+    mask-image: linear-gradient(to bottom, black 0%, transparent 55%);
+  }
+}
+
+@layer components {
+  /* Standard white card used by panels, tables and charts. */
+  .card-surface {
+    @apply rounded-xl border border-border/80 bg-card shadow-card;
+  }
+  /* Frosted panel for filter bars and headers sitting on the ambient backdrop. */
+  .glass-surface {
+    @apply rounded-xl border border-white/70 bg-white/70 shadow-card backdrop-blur-md;
+  }
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(100 116 139 / 0.35) transparent;
   }
 }
