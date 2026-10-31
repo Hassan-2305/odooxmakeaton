@@ -85,7 +85,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
     <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
       <KpiCard
         label="Active subscriptions"
-        icon={RepeatIcon} accent="blue"
+        icon={RepeatIcon}
         glossary="Subscriptions in the active state right now. Not limited to the date range."
         value={s && formatCount(s.activeSubscriptions)}
         sub="As of today"
@@ -94,45 +94,50 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       />
       <KpiCard
         label="MRR"
-        icon={TrendingUpIcon} accent="green"
+        icon={TrendingUpIcon}
         glossary="Monthly recurring revenue: every active subscription's recurring amount converted to a monthly figure, before tax and discounts."
-        value={s && formatMoney(s.mrrPaise)}
+        value={s && formatMoneyCompact(s.mrrPaise)}
+        exact={s && formatMoney(s.mrrPaise)}
         sub="Monthly, pre-tax"
         to={link("/subscriptions", { status: "active" })}
         loading={loading}
       />
       <KpiCard
         label="Invoiced"
-        icon={FileTextIcon} accent="violet"
+        icon={FileTextIcon}
         glossary="Total of confirmed and paid invoices issued between the from and to dates."
-        value={s && formatMoney(s.invoicedPaise)}
+        value={s && formatMoneyCompact(s.invoicedPaise)}
+        exact={s && formatMoney(s.invoicedPaise)}
         sub={s && `${formatDate(s.from)} – ${formatDate(s.to)}`}
         to={link("/invoices", { from, to })}
         loading={loading}
       />
       <KpiCard
         label="Collected"
-        icon={WalletIcon} accent="cyan"
+        icon={WalletIcon}
         glossary="Payment amounts applied to invoices, for payments received between the from and to dates."
-        value={s && formatMoney(s.collectedPaise)}
+        value={s && formatMoneyCompact(s.collectedPaise)}
+        exact={s && formatMoney(s.collectedPaise)}
         sub={s && `${formatDate(s.from)} – ${formatDate(s.to)}`}
         to={link("/payments", { from, to })}
         loading={loading}
       />
       <KpiCard
         label="Outstanding"
-        icon={BadgeIndianRupeeIcon} accent="amber"
+        icon={BadgeIndianRupeeIcon}
         glossary="Unpaid balance of every confirmed invoice as of today, whether due or not."
-        value={s && formatMoney(s.outstandingPaise)}
+        value={s && formatMoneyCompact(s.outstandingPaise)}
+        exact={s && formatMoney(s.outstandingPaise)}
         sub="Confirmed, unpaid"
         to={link("/invoices", { status: "confirmed" })}
         loading={loading}
       />
       <KpiCard
         label="Overdue"
-        icon={AlertTriangleIcon} accent="red"
+        icon={AlertTriangleIcon}
         glossary="Confirmed invoices past their due date with a balance left to pay. Shows the count and the unpaid amount."
-        value={s && formatMoney(s.overdue.amountPaise)}
+        value={s && formatMoneyCompact(s.overdue.amountPaise)}
+        exact={s && formatMoney(s.overdue.amountPaise)}
         sub={s && `${formatCount(s.overdue.count)} invoice${s.overdue.count === 1 ? "" : "s"}`}
         to={link("/invoices", { overdue: "true" })}
         loading={loading}
@@ -140,7 +145,7 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       />
       <KpiCard
         label="Open findings"
-        icon={ShieldAlertIcon} accent="orange"
+        icon={ShieldAlertIcon}
         glossary="Revenue integrity findings still waiting for review: missing invoices, duplicate invoices and unallocated payments."
         value={s && formatCount(s.openFindings)}
         sub="Revenue integrity"
@@ -151,7 +156,6 @@ function KpiGrid({ filters, summary }: { filters: ReportFilters; summary: Return
       <KpiCard
         label="Collection rate"
         icon={PercentIcon}
-        accent="green"
         glossary="Collected as a share of Invoiced for the selected date range."
         value={s && (s.invoicedPaise > 0 ? `${Math.round((s.collectedPaise / s.invoicedPaise) * 100)}%` : "—")}
         sub="Collected ÷ invoiced"

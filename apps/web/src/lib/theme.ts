@@ -5,31 +5,31 @@
  */
 
 export const colors = {
-  background: "#f5f7fb", // soft cool-grey page
+  background: "#f4f2ee", // warm paper
   foreground: "#0f172a", // slate ink
-  surface: "#f8fafc", // table headers, footers, subtle panels
+  surface: "#f9f8f6", // table headers, footers, subtle panels
   "surface-foreground": "#0f172a",
   card: "#ffffff",
   "card-foreground": "#0f172a",
   popover: "#ffffff",
   "popover-foreground": "#0f172a",
-  primary: "#ea580c", // orange
+  primary: "#e8601a", // brand orange
   "primary-foreground": "#ffffff",
-  secondary: "#f1f5f9",
+  secondary: "#f1eee9",
   "secondary-foreground": "#0f172a",
-  muted: "#f1f5f9",
-  "muted-foreground": "#64748b",
+  muted: "#f1eee9",
+  "muted-foreground": "#6b665e",
   accent: "#fff1e8", // orange tint for hover / active nav
   "accent-foreground": "#c2410c",
   destructive: "#dc2626",
   "destructive-foreground": "#ffffff",
-  border: "#e6eaf0",
-  input: "#dbe1e8",
+  border: "#e7e2da",
+  input: "#dbd5cc",
   ring: "#f97316",
   // Dark navy sidebar
   sidebar: "#0f1729",
   "sidebar-foreground": "#cbd5e1",
-  "sidebar-muted": "#64748b",
+  "sidebar-muted": "#7c879c",
   "sidebar-accent": "#2a1d1a", // warm tint behind the active item
   "sidebar-border": "#1e293b",
 } as const;

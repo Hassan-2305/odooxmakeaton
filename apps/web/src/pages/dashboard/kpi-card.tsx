@@ -4,79 +4,60 @@ import { Link } from "react-router";
 import { GlossaryTip } from "@/components/glossary-tip";
 import { cn } from "@/lib/utils";
 
-export type KpiAccent = "orange" | "blue" | "green" | "violet" | "red" | "amber" | "cyan";
-
-const ACCENTS: Record<KpiAccent, string> = {
-  orange: "bg-orange-50 text-orange-600 ring-orange-100",
-  blue: "bg-blue-50 text-blue-600 ring-blue-100",
-  green: "bg-emerald-50 text-emerald-600 ring-emerald-100",
-  violet: "bg-violet-50 text-violet-600 ring-violet-100",
-  red: "bg-red-50 text-red-600 ring-red-100",
-  amber: "bg-amber-50 text-amber-600 ring-amber-100",
-  cyan: "bg-cyan-50 text-cyan-600 ring-cyan-100",
-};
-
 interface KpiCardProps {
   label: string;
   /** Explains the metric in the glossary tooltip. */
   glossary: ReactNode;
+  /** Headline figure; money is shown compact (₹4.6Cr) so it never truncates. */
   value: ReactNode;
+  /** Exact amount, shown under the headline when `value` is compact. */
+  exact?: string;
   sub?: ReactNode;
   /** List route with matching filters in the query string. */
   to: string;
   loading?: boolean;
   tone?: "default" | "warning";
   icon: LucideIcon;
-  accent?: KpiAccent;
 }
 
-export function KpiCard({ label, glossary, value, sub, to, loading, tone = "default", icon: Icon, accent = "blue" }: KpiCardProps) {
+export function KpiCard({ label, glossary, value, exact, sub, to, loading, tone = "default", icon: Icon }: KpiCardProps) {
   const warn = tone === "warning";
   return (
     <Link
       to={to}
-      className={cn(
-        "group card-surface relative flex gap-4 p-5 transition-all hover:-translate-y-0.5 hover:shadow-lg hover:shadow-slate-900/5 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none",
-        warn && "border-red-100 bg-gradient-to-br from-red-50/70 to-white",
-      )}
+      title={exact}
+      className="group card-surface relative flex flex-col p-5 transition-colors hover:border-foreground/20 focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none"
     >
-      <span
-        className={cn(
-          "flex size-11 shrink-0 items-center justify-center rounded-xl ring-1",
-          ACCENTS[warn ? "red" : accent],
-        )}
-        aria-hidden
-      >
-        <Icon className="size-5" />
-      </span>
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-1.5 text-sm font-medium text-muted-foreground">
-          <span className="truncate">{label}</span>
-          <GlossaryTip term={label}>{glossary}</GlossaryTip>
-          <ArrowUpRightIcon
-            className="ml-auto size-4 shrink-0 text-primary opacity-0 transition-opacity group-hover:opacity-100"
-            aria-hidden
-          />
-        </div>
-        {loading ? (
-          <>
-            <div className="mt-2 h-7 w-28 animate-pulse rounded bg-muted" />
-            <div className="mt-2 h-4 w-20 animate-pulse rounded bg-muted" />
-          </>
-        ) : (
-          <>
-            <p
-              className={cn(
-                "mt-1 truncate text-[1.6rem] leading-tight font-bold tracking-tight tabular-nums",
-                warn && "text-status-overdue",
-              )}
-            >
-              {value}
-            </p>
-            <p className={cn("mt-1 min-h-4 text-xs", warn ? "font-medium text-red-600" : "text-muted-foreground")}>{sub}</p>
-          </>
-        )}
+      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+        <Icon className={cn("size-4 shrink-0", warn ? "text-status-overdue" : "text-foreground/40")} aria-hidden />
+        <span className="truncate">{label}</span>
+        <GlossaryTip term={label}>{glossary}</GlossaryTip>
+        <ArrowUpRightIcon
+          className="ml-auto size-4 shrink-0 text-foreground/30 transition-colors group-hover:text-primary"
+          aria-hidden
+        />
       </div>
+      {loading ? (
+        <>
+          <div className="mt-4 h-8 w-28 animate-pulse rounded bg-muted" />
+          <div className="mt-2 h-4 w-36 animate-pulse rounded bg-muted" />
+        </>
+      ) : (
+        <>
+          <p
+            className={cn(
+              "mt-3 text-[1.85rem] leading-none font-semibold tracking-[-0.03em] tabular-nums",
+              warn && "text-status-overdue",
+            )}
+          >
+            {value}
+          </p>
+          <p className="mt-2.5 min-h-4 truncate text-xs tabular-nums text-foreground/70">{exact ?? " "}</p>
+          <p className={cn("mt-0.5 min-h-4 truncate text-xs text-muted-foreground", warn && "font-medium text-status-overdue")}>
+            {sub}
+          </p>
+        </>
+      )}
     </Link>
   );
 }
