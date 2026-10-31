@@ -9,7 +9,7 @@ export function NotFoundPage() {
     <div className="flex min-h-svh flex-col items-center justify-center gap-6 px-4">
       <Brand to="/" />
       <div className="card-surface w-full max-w-md">
-        <p className="pt-10 text-center text-6xl font-bold tracking-tight text-transparent bg-gradient-to-br from-orange-400 to-orange-600 bg-clip-text">
+        <p className="pt-10 text-center text-6xl font-semibold tracking-tight text-foreground/15">
           404
         </p>
         <EmptyState

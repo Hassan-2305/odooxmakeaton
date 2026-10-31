@@ -5,8 +5,8 @@ import { cn } from "@/lib/utils";
 
 export function BackLink({ to, children }: { to: string; children: ReactNode }) {
   return (
-    <Link to={to} className="group mb-4 inline-flex items-center gap-1.5 rounded-full border bg-white/80 px-3 py-1 text-xs font-medium text-muted-foreground shadow-xs backdrop-blur transition-colors hover:border-primary/40 hover:text-primary">
-      <ArrowLeftIcon className="size-3.5 transition-transform group-hover:-translate-x-0.5" aria-hidden /> {children}
+    <Link to={to} className="back-link group mb-3 inline-flex items-center gap-1.5 text-sm text-muted-foreground transition-colors hover:text-foreground">
+      <ArrowLeftIcon className="size-4 transition-transform group-hover:-translate-x-0.5" aria-hidden /> {children}
     </Link>
   );
 }
@@ -29,12 +29,7 @@ export function DetailCard({
     <section className={cn("card-surface", className)}>
       {(title || actions) && (
         <header className="flex flex-wrap items-center justify-between gap-2 border-b px-5 py-3.5">
-          {title && (
-            <h2 className="flex items-center gap-2 font-semibold">
-              <span className="h-4 w-1 rounded-full bg-gradient-to-b from-orange-400 to-orange-600" aria-hidden />
-              {title}
-            </h2>
-          )}
+          {title && <h2 className="font-semibold">{title}</h2>}
           {actions && <div className="flex flex-wrap gap-2">{actions}</div>}
         </header>
       )}
@@ -49,8 +44,8 @@ export function DetailList({ items, className }: { items: [ReactNode, ReactNode]
     <dl className={cn("grid gap-x-6 gap-y-3 text-sm sm:grid-cols-2", className)}>
       {items.map(([label, value], i) => (
         <div key={i} className="grid gap-0.5">
-          <dt className="text-xs font-medium tracking-wide text-muted-foreground uppercase">{label}</dt>
-          <dd className="font-medium break-words">{value ?? "—"}</dd>
+          <dt className="text-muted-foreground">{label}</dt>
+          <dd className="break-words">{value ?? "—"}</dd>
         </div>
       ))}
     </dl>
@@ -73,9 +68,9 @@ export function TotalsList({ rows }: { rows: { label: ReactNode; value: ReactNod
   return (
     <dl className="ml-auto grid w-full max-w-xs gap-1.5 text-sm">
       {rows.map((r, i) => (
-        <div key={i} className={cn("flex justify-between gap-4", r.strong && "mt-1 border-t pt-2 text-base font-bold")}>
+        <div key={i} className={cn("flex justify-between gap-4", r.strong && "mt-1 border-t pt-2 font-semibold text-foreground")}>
           <dt className={r.strong ? undefined : "text-muted-foreground"}>{r.label}</dt>
-          <dd className={cn("tabular-nums", r.strong && "text-primary")}>{r.value}</dd>
+          <dd className="tabular-nums">{r.value}</dd>
         </div>
       ))}
     </dl>
@@ -111,7 +106,7 @@ export function SimpleTable({
         </thead>
         <tbody>
           {rows.map((r) => (
-            <tr key={r.key} className="border-b border-border/70 align-top transition-colors last:border-0 hover:bg-orange-50/40">
+            <tr key={r.key} className="border-b border-border/70 align-top last:border-0">
               {r.cells.map((c, i) => (
                 <td
                   key={i}

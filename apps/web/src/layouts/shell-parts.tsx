@@ -1,36 +1,32 @@
 import type { AuthUser } from "@brightloop/shared";
 import { LogOutIcon } from "lucide-react";
-import { useId } from "react";
 import { Link, useNavigate } from "react-router";
 import { Button } from "@/components/ui/button";
 import { useLogout } from "@/lib/auth";
 import { BRAND_NAME } from "@/lib/brand";
 import { cn } from "@/lib/utils";
 
-/** The Recurra mark: an orange tile with a looping renewal arrow around a core dot. */
+/** The Recurra mark: an "R" drawn as one unbroken stroke, stem into bowl into leg, a single loop. */
 export function LogoMark({ className }: { className?: string }) {
-  const id = useId();
   return (
     <svg viewBox="0 0 32 32" fill="none" className={cn("size-8 shrink-0", className)} aria-hidden>
-      <defs>
-        <linearGradient id={id} x1="0" y1="0" x2="32" y2="32" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fb923c" />
-          <stop offset="1" stopColor="#ea580c" />
-        </linearGradient>
-      </defs>
-      <rect width="32" height="32" rx="8" fill={`url(#${id})`} />
-      <path d="M22.4 11.2A8 8 0 1 0 24 16" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" />
-      <path d="M19.6 10.4h3.4V7" stroke="#fff" strokeWidth="2.6" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="16" cy="16" r="2.6" fill="#fff" />
+      <rect width="32" height="32" rx="9" fill="#F26A1B" />
+      <path
+        d="M10 25V12.5a5.5 5.5 0 0 1 11 0 5.5 5.5 0 0 1-5.5 5.5H14l8 7"
+        stroke="#fff"
+        strokeWidth="3.4"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
     </svg>
   );
 }
 
 export function Brand({ to = "/", className }: { to?: string; className?: string }) {
   return (
-    <Link to={to} className={cn("flex items-center gap-2.5 text-[1.05rem] font-bold tracking-tight", className)}>
+    <Link to={to} className={cn("flex items-center gap-2.5 text-[1.15rem] font-bold tracking-[-0.03em]", className)}>
       <LogoMark />
-      <span>{BRAND_NAME}</span>
+      <span>{BRAND_NAME.toLowerCase()}</span>
     </Link>
   );
 }
@@ -48,7 +44,7 @@ export function Avatar({ name, className }: { name: string; className?: string }
   return (
     <span
       className={cn(
-        "flex size-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-400 to-orange-600 text-xs font-semibold text-white",
+        "flex size-9 shrink-0 items-center justify-center rounded-full bg-[#2a3654] text-xs font-semibold text-white ring-1 ring-white/15",
         className,
       )}
       aria-hidden

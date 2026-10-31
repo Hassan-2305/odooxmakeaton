@@ -30,13 +30,12 @@ function Balance({ customerId }: { customerId: string }) {
   });
   const s = summary.data;
   const tile = (label: string, value: string | undefined, sub?: string, warn?: boolean) => (
-    <div className="card-surface relative overflow-hidden p-5">
-      <span className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-orange-400 to-orange-600 opacity-70" aria-hidden />
-      <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    <div className="card-surface p-5">
+      <p className="text-sm text-muted-foreground">{label}</p>
       {summary.isPending ? (
         <div className="mt-2 h-7 w-28 animate-pulse rounded bg-muted" />
       ) : (
-        <p className={`mt-1 text-2xl font-bold tracking-tight tabular-nums ${warn ? "text-status-overdue" : ""}`}>{value ?? "—"}</p>
+        <p className={`mt-1 text-2xl font-semibold tracking-tight tabular-nums ${warn ? "text-status-overdue" : ""}`}>{value ?? "—"}</p>
       )}
       {sub && <p className="text-xs text-muted-foreground">{sub}</p>}
     </div>

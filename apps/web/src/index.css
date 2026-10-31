@@ -39,7 +39,7 @@
   --color-sidebar-border: var(--sidebar-border);
 
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
-  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.04), 0 4px 16px -4px rgb(15 23 42 / 0.06);
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 8px 24px -12px rgb(15 23 42 / 0.12);
 
   --color-status-paid: var(--status-paid);
   --color-status-paid-bg: var(--status-paid-bg);
@@ -66,31 +66,6 @@
   h1, h2, h3 {
     letter-spacing: -0.015em;
   }
-
-  /*
-   * Ambient backdrop behind every screen: soft orange/indigo glows plus a faint dot grid
-   * that fades out toward the bottom. Fixed, so it stays put while content scrolls.
-   */
-  body::before,
-  body::after {
-    content: "";
-    position: fixed;
-    inset: 0;
-    z-index: -1;
-    pointer-events: none;
-  }
-  body::before {
-    background:
-      radial-gradient(42rem 28rem at 100% -6%, rgb(249 115 22 / 0.13), transparent 70%),
-      radial-gradient(36rem 26rem at 18% 0%, rgb(99 102 241 / 0.08), transparent 70%),
-      radial-gradient(40rem 30rem at 0% 100%, rgb(14 165 233 / 0.07), transparent 70%),
-      radial-gradient(30rem 24rem at 85% 95%, rgb(249 115 22 / 0.06), transparent 70%);
-  }
-  body::after {
-    background-image: radial-gradient(rgb(15 23 42 / 0.07) 1px, transparent 1px);
-    background-size: 22px 22px;
-    mask-image: linear-gradient(to bottom, black 0%, transparent 55%);
-  }
 }
 
 @layer components {
@@ -98,12 +73,37 @@
   .card-surface {
     @apply rounded-xl border border-border/80 bg-card shadow-card;
   }
-  /* Frosted panel for filter bars and headers sitting on the ambient backdrop. */
+  /* Same as card-surface; kept as a separate name for filter bars. */
   .glass-surface {
-    @apply rounded-xl border border-white/70 bg-white/70 shadow-card backdrop-blur-md;
+    @apply rounded-xl border border-border/80 bg-card shadow-card;
   }
   .scrollbar-thin {
     scrollbar-width: thin;
     scrollbar-color: rgb(100 116 139 / 0.35) transparent;
   }
+}
+
+/*
+ * Page titles sit on the navy masthead band in the back-office shell. Unlayered on purpose so
+ * these beat the text-colour utilities on the same elements.
+ */
+[data-band] .page-header .page-title {
+  color: #fff;
+}
+[data-band] .page-header .page-desc {
+  color: rgb(203 213 225);
+}
+[data-band] .page-header [data-variant="outline"] {
+  background: rgb(255 255 255 / 0.08);
+  border-color: rgb(255 255 255 / 0.18);
+  color: #fff;
+}
+[data-band] .page-header [data-variant="outline"]:hover {
+  background: rgb(255 255 255 / 0.14);
+}
+[data-band] .back-link {
+  color: rgb(203 213 225);
+}
+[data-band] .back-link:hover {
+  color: #fff;
 }

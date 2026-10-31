@@ -2,6 +2,7 @@ import type { AuthUser } from "@brightloop/shared";
 import { MenuIcon } from "lucide-react";
 import { useState } from "react";
 import { NavLink, Outlet } from "react-router";
+import { ContourArt } from "@/components/contour-art";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogDescription, DialogTitle, SheetContent } from "@/components/ui/dialog";
 import { useSSE } from "@/hooks/use-sse";
@@ -23,7 +24,7 @@ function PortalLinks({ onNavigate }: { onNavigate?: () => void }) {
               cn(
                 "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
                 isActive
-                  ? "bg-accent font-medium text-accent-foreground"
+                  ? "bg-sidebar font-medium text-white [&>svg]:text-[#F26A1B]"
                   : "text-foreground/75 hover:bg-surface hover:text-foreground",
               )
             }
@@ -61,7 +62,7 @@ export function PortalLayout() {
   useSSE();
 
   return (
-    <div className="min-h-svh md:grid md:grid-cols-[15.5rem_1fr]">
+    <div className="relative isolate min-h-svh md:grid md:grid-cols-[15.5rem_1fr]">
       <aside className="sticky top-0 hidden h-svh border-r md:block">
         <PortalSidebar user={user} />
       </aside>
@@ -81,6 +82,11 @@ export function PortalLayout() {
         </SheetContent>
       </Dialog>
 
+      <ContourArt
+        variant="corner"
+        highlight={-1}
+        className="pointer-events-none fixed right-0 bottom-0 -z-10 h-[32rem] w-[44rem] max-w-full text-[#0f1729]/[0.06]"
+      />
       <main className="mx-auto w-full max-w-7xl min-w-0 px-4 py-6 md:px-8 md:py-8">
         <Outlet />
       </main>
