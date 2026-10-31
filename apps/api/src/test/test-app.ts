@@ -61,6 +61,7 @@ export function createTestApp(overrides: Partial<AppDeps> = {}) {
     auditService,
     reportsService: notWired("reportsService"),
     portalService: notWired("portalService"),
+    integrityService: notWired("integrityService"),
     authRateLimit: false,
     ...overrides,
   });
