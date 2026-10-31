@@ -77,32 +77,137 @@ describe.skipIf(!dbAvailable)("integrityService (Postgres)", () => {
       }
     }));
 
-  it("flags every invoice after the first for the same subscription and period", () =>
+  it("flags a later invoice whose billing period overlaps an earlier one for the subscription", () =>
     inRollback(async (tx) => {
       const { service, f } = await setup(tx);
-      // The schema's unique constraint already prevents this; drop it inside the
-      // rolled-back transaction to simulate data that slipped past it.
-      await tx.execute(sql`alter table invoices drop constraint invoices_subscription_period_unique`);
       const c = await f.customer();
       const plan = await f.plan("month");
       const sub = await f.subscription({ customerId: c.id, planId: plan.id });
+      const other = await f.subscription({ customerId: c.id, planId: plan.id });
+      const later = (id: string, minutes: number) =>
+        tx.execute(sql`update invoices set created_at = now() + make_interval(mins => ${minutes}) where id = ${id}::uuid`);
+
       const original = await f.invoice({ customerId: c.id, subscriptionId: sub.id, totalPaise: 5000 });
-      const dup = await f.invoice({ customerId: c.id, subscriptionId: sub.id, totalPaise: 5000 });
-      await tx.execute(sql`update invoices set created_at = now() + interval '1 minute' where id = ${dup.id}::uuid`);
-      const cancelled = await f.invoice({ customerId: c.id, subscriptionId: sub.id, status: "cancelled", totalPaise: 5000 });
+      // Starts a day later, so the unique (subscription_id, period_start) constraint allows it.
+      const dup = await f.invoice({
+        customerId: c.id,
+        subscriptionId: sub.id,
+        totalPaise: 5000,
+        periodStart: "2026-10-02",
+        periodEnd: "2026-11-01",
+      });
+      await later(dup.id, 1);
+      // Periods are half-open: the next period starts where this one ends and does not overlap.
+      const next = await f.invoice({
+        customerId: c.id,
+        subscriptionId: sub.id,
+        totalPaise: 5000,
+        periodStart: "2026-11-01",
+        periodEnd: "2026-12-01",
+      });
+      await later(next.id, 2);
+      const cancelled = await f.invoice({
+        customerId: c.id,
+        subscriptionId: sub.id,
+        status: "cancelled",
+        totalPaise: 5000,
+        periodStart: "2026-10-15",
+        periodEnd: "2026-11-15",
+      });
+      await later(cancelled.id, 3);
+      // Same period on a different subscription is not a duplicate.
+      const elsewhere = await f.invoice({ customerId: c.id, subscriptionId: other.id, totalPaise: 5000 });
+      await later(elsewhere.id, 4);
+
+      const result = await service.scan();
+
+      for (const ok of [original, next, cancelled, elsewhere]) {
+        expect(await findingFor(tx, "duplicate_invoice", ok.id)).toEqual([]);
+      }
+      expect(await findingFor(tx, "duplicate_invoice", dup.id)).toEqual([
+        expect.objectContaining({
+          severity: "high",
+          status: "open",
+          entity_type: "invoice",
+          customer_id: c.id,
+          impact_paise: "5000",
+          expected: { overlappingInvoices: 0 },
+          actual: { overlappingInvoices: 1 },
+          evidence: {
+            subscriptionId: sub.id,
+            recommendedAction: "void_duplicate",
+            invoiceId: dup.id,
+            invoiceNumber: dup.number,
+            periodStart: "2026-10-02",
+            periodEnd: "2026-11-01",
+            originalInvoiceId: original.id,
+            originalInvoiceNumber: original.number,
+            originalPeriodStart: "2026-10-01",
+            originalPeriodEnd: "2026-11-01",
+            overlapStart: "2026-10-02",
+            overlapEnd: "2026-11-01",
+          },
+        }),
+      ]);
+      expect(result.byRule.duplicate_invoice).toBeGreaterThanOrEqual(1);
+    }));
+
+  it("names the earliest overlapping invoice as the original and counts every overlap", () =>
+    inRollback(async (tx) => {
+      const { service, f } = await setup(tx);
+      const c = await f.customer();
+      const plan = await f.plan("month");
+      const sub = await f.subscription({ customerId: c.id, planId: plan.id });
+      const original = await f.invoice({ customerId: c.id, subscriptionId: sub.id, totalPaise: 3000 });
+      const second = await f.invoice({
+        customerId: c.id,
+        subscriptionId: sub.id,
+        totalPaise: 3000,
+        periodStart: "2026-10-10",
+        periodEnd: "2026-11-10",
+      });
+      const third = await f.invoice({
+        customerId: c.id,
+        subscriptionId: sub.id,
+        totalPaise: 1000,
+        periodStart: "2026-10-20",
+        periodEnd: "2026-10-25",
+      });
+      await tx.execute(sql`update invoices set created_at = now() + interval '1 minute' where id = ${second.id}::uuid`);
+      await tx.execute(sql`update invoices set created_at = now() + interval '2 minutes' where id = ${third.id}::uuid`);
 
       await service.scan();
 
       expect(await findingFor(tx, "duplicate_invoice", original.id)).toEqual([]);
-      expect(await findingFor(tx, "duplicate_invoice", cancelled.id)).toEqual([]);
-      expect(await findingFor(tx, "duplicate_invoice", dup.id)).toEqual([
+      expect(await findingFor(tx, "duplicate_invoice", second.id)).toEqual([
         expect.objectContaining({
-          entity_type: "invoice",
-          impact_paise: "5000",
-          expected: { invoicesForPeriod: 1 },
-          actual: { invoicesForPeriod: 2 },
-          evidence: expect.objectContaining({ originalInvoiceId: original.id }),
+          actual: { overlappingInvoices: 1 },
+          evidence: expect.objectContaining({
+            originalInvoiceId: original.id,
+            overlapStart: "2026-10-10",
+            overlapEnd: "2026-11-01",
+          }),
         }),
+      ]);
+      expect(await findingFor(tx, "duplicate_invoice", third.id)).toEqual([
+        expect.objectContaining({
+          impact_paise: "1000",
+          actual: { overlappingInvoices: 2 },
+          evidence: expect.objectContaining({
+            originalInvoiceId: original.id,
+            periodStart: "2026-10-20",
+            periodEnd: "2026-10-25",
+            recommendedAction: "void_duplicate",
+          }),
+        }),
+      ]);
+
+      // Voiding the duplicates resolves their findings on the next scan.
+      await tx.execute(sql`update invoices set status = 'cancelled' where id in (${second.id}::uuid, ${third.id}::uuid)`);
+      const rescan = await service.scan();
+      expect(rescan.autoResolved).toBeGreaterThanOrEqual(2);
+      expect(await findingFor(tx, "duplicate_invoice", second.id)).toEqual([
+        expect.objectContaining({ status: "resolved" }),
       ]);
     }));
 
