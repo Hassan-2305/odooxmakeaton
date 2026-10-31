@@ -27,16 +27,23 @@ interface StatusBadgeProps {
   tone?: StatusTone;
   /** Text to show instead of the humanized status. */
   label?: string;
+  /** Outlined, no fill: used for ended states such as a cancelled invoice. */
+  outline?: boolean;
   className?: string;
 }
 
-export function StatusBadge({ status, tone, label, className }: StatusBadgeProps) {
+/** Active / Inactive, for catalog records. */
+export function ActiveBadge({ active }: { active: boolean }) {
+  return active ? <StatusBadge status="active" label="Active" /> : <StatusBadge status="closed" label="Inactive" />;
+}
+
+export function StatusBadge({ status, tone, label, outline, className }: StatusBadgeProps) {
   const resolved = tone ?? toneForStatus(status);
   return (
     <span
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-xs font-medium whitespace-nowrap",
-        toneClasses[resolved],
+        outline ? "border border-status-draft/50 bg-transparent text-muted-foreground" : toneClasses[resolved],
         className,
       )}
     >

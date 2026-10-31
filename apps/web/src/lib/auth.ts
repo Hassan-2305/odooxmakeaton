@@ -83,3 +83,8 @@ export function useResetPassword() {
     onSuccess: () => queryClient.setQueryData(meQueryKey, null),
   });
 }
+
+/** Admin-only actions are hidden for staff; the API enforces the same rule. */
+export function useIsAdmin(): boolean {
+  return useMe().data?.role === "admin";
+}

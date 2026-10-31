@@ -16,6 +16,10 @@ export interface DataTableColumn<T> {
   sortField?: string;
   align?: "left" | "right" | "center";
   className?: string;
+  /** Label in the mobile card when `header` isn't plain text. */
+  cardLabel?: string;
+  /** Leave this column out of the mobile card (e.g. it is already the card title). */
+  hideOnCard?: boolean;
 }
 
 interface DataTableProps<T> {
@@ -28,6 +32,8 @@ interface DataTableProps<T> {
   empty?: ReactNode;
   onRowClick?: (row: T) => void;
   className?: string;
+  /** Card heading under 640px; defaults to the first column's cell. */
+  cardTitle?: (row: T) => ReactNode;
 }
 
 const nf = new Intl.NumberFormat("en-IN");
@@ -48,6 +54,7 @@ export function DataTable<T>({
   empty,
   onRowClick,
   className,
+  cardTitle,
 }: DataTableProps<T>) {
   const { data, isPending, isError, error, refetch, isFetching, isPlaceholderData } = query;
   const current = parseSort(list.sort);
@@ -67,12 +74,57 @@ export function DataTable<T>({
   const alignClass = (align?: DataTableColumn<T>["align"]) =>
     align === "right" ? "text-right" : align === "center" ? "text-center" : "text-left";
 
+  const emptyNode = empty ?? <EmptyState title="Nothing here yet" description="Try changing the filters." />;
+  const [firstCol, ...restCols] = columns;
+  const titleOf = cardTitle ?? ((row: T) => firstCol?.cell(row));
+  const cardCols = (cardTitle ? columns : restCols).filter((c) => !c.hideOnCard);
+
   return (
     <div className={cn("space-y-3", className)}>
-      {filters && <div className="flex flex-wrap items-end gap-2">{filters}</div>}
+      {filters && <div className="flex flex-wrap items-end gap-2 [&>*]:max-sm:w-full">{filters}</div>}
 
       <div className="overflow-hidden rounded-lg border bg-card">
-        <div className="overflow-x-auto">
+        {/* Under 640px each row becomes a card. */}
+        <div className={cn("sm:hidden", isFetching && isPlaceholderData && "opacity-60")}>
+          {isPending ? (
+            <ul className="divide-y">
+              {Array.from({ length: 3 }, (_, i) => (
+                <li key={i} className="space-y-2 p-3">
+                  <div className="h-4 w-1/2 animate-pulse rounded bg-muted" />
+                  <div className="h-3 w-3/4 animate-pulse rounded bg-muted" />
+                </li>
+              ))}
+            </ul>
+          ) : isError ? (
+            <ErrorState error={error} onRetry={() => void refetch()} />
+          ) : rows.length === 0 ? (
+            emptyNode
+          ) : (
+            <ul className="divide-y">
+              {rows.map((row) => (
+                <li
+                  key={rowKey(row)}
+                  onClick={onRowClick ? () => onRowClick(row) : undefined}
+                  className={cn("space-y-2 p-3", onRowClick && "cursor-pointer active:bg-surface/60")}
+                >
+                  <div className="font-medium">{titleOf(row)}</div>
+                  <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                    {cardCols.map((col) => (
+                      <div key={col.id} className="contents">
+                        <dt className="text-muted-foreground">
+                          {col.cardLabel ?? (typeof col.header === "string" ? col.header : col.id)}
+                        </dt>
+                        <dd className="min-w-0 text-right break-words">{col.cell(row)}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="hidden overflow-x-auto sm:block">
           <table className={cn("w-full text-sm", isFetching && isPlaceholderData && "opacity-60")}>
             <thead className="bg-surface text-muted-foreground">
               <tr className="border-b">
@@ -127,9 +179,7 @@ export function DataTable<T>({
                 </tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={columns.length}>
-                    {empty ?? <EmptyState title="Nothing here yet" description="Try changing the filters." />}
-                  </td>
+                  <td colSpan={columns.length}>{emptyNode}</td>
                 </tr>
               ) : (
                 rows.map((row) => (
