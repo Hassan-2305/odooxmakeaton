@@ -51,16 +51,26 @@ function DialogContent({
   );
 }
 
-/** Full-height panel sliding in from the left; used for the mobile nav drawer. */
-function SheetContent({ className, children, ...props }: React.ComponentProps<typeof DialogPrimitive.Content>) {
+/**
+ * Full-height panel. Slides in from the left by default (the mobile nav drawer); `side="right"`
+ * gives a detail drawer.
+ */
+function SheetContent({
+  className,
+  children,
+  side = "left",
+  ...props
+}: React.ComponentProps<typeof DialogPrimitive.Content> & { side?: "left" | "right" }) {
   return (
     <DialogPortal>
       <DialogOverlay />
       <DialogPrimitive.Content
         data-slot="sheet-content"
         className={cn(
-          "fixed inset-y-0 left-0 z-50 flex h-full w-72 max-w-[85vw] flex-col bg-surface shadow-lg",
-          "data-[state=open]:animate-in data-[state=open]:slide-in-from-left data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left",
+          "fixed inset-y-0 z-50 flex h-full flex-col shadow-lg",
+          side === "left"
+            ? "left-0 w-72 max-w-[85vw] bg-surface data-[state=open]:animate-in data-[state=open]:slide-in-from-left data-[state=closed]:animate-out data-[state=closed]:slide-out-to-left"
+            : "right-0 w-full max-w-2xl bg-background data-[state=open]:animate-in data-[state=open]:slide-in-from-right data-[state=closed]:animate-out data-[state=closed]:slide-out-to-right",
           className,
         )}
         {...props}
