@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import type { Db } from "../db/client.js";
 import { settings } from "../db/schema/index.js";
 import type { DbOrTx } from "./audit.repository.js";
 
@@ -15,7 +16,7 @@ export function formatNumber(prefix: string, seq: number): string {
   return `${prefix}${String(seq).padStart(6, "0")}`;
 }
 
-export function createSettingsRepository() {
+export function createSettingsRepository(db: Db) {
   return {
     /**
      * Takes the next number of `kind` from the settings row inside `tx`. The row is
@@ -33,7 +34,7 @@ export function createSettingsRepository() {
       return formatNumber(row.prefix, row.next - 1);
     },
 
-    async get(tx: DbOrTx) {
+    async get(tx: DbOrTx = db) {
       const [row] = await tx.select().from(settings).where(eq(settings.id, 1)).limit(1);
       if (!row) throw new Error("settings row is missing; run the seed");
       return row;

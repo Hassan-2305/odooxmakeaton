@@ -20,6 +20,7 @@ import { createDiscountsRouter } from "./discounts.routes.js";
 import { createEventsRouter } from "./events.routes.js";
 import { createHealthRouter } from "./health.routes.js";
 import { createIntegrityRouter } from "./integrity.routes.js";
+import { createInvoicesRouter, createPaymentsRouter } from "./invoices.routes.js";
 import { createPortalRouter } from "./portal.routes.js";
 import { createReportsRouter } from "./reports.routes.js";
 import { createStaffRouter } from "./staff.routes.js";
@@ -83,4 +84,6 @@ function mountDomainRoutes(api: Router, domain: DomainServices) {
   api.use("/quotation-templates", createTemplatesRouter(domain));
   api.use("/subscriptions", createSubscriptionsRouter(domain));
   api.use("/billing", createBillingRouter(domain));
+  api.use("/invoices", createInvoicesRouter(domain));
+  api.use("/payments", createPaymentsRouter(domain));
 }

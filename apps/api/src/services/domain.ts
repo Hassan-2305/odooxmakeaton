@@ -8,13 +8,16 @@ import { createBillingRunsRepository } from "../repositories/billing-runs.reposi
 import { createCatalogRepository } from "../repositories/catalog.repository.js";
 import { createDiscountsRepository } from "../repositories/discounts.repository.js";
 import { createInvoicesRepository } from "../repositories/invoices.repository.js";
+import { createPaymentsRepository } from "../repositories/payments.repository.js";
 import { createSettingsRepository } from "../repositories/settings.repository.js";
 import { createSubscriptionsRepository } from "../repositories/subscriptions.repository.js";
 import { createTemplatesRepository } from "../repositories/templates.repository.js";
 import { createPlansRepository, createTaxesRepository } from "../repositories/taxes-plans.repository.js";
 import { createCatalogService } from "./catalog.service.js";
 import { createDiscountService } from "./discount.service.js";
+import { createInvoiceActionsService } from "./invoice-actions.service.js";
 import { createInvoiceService, type InvoiceService } from "./invoice.service.js";
+import { createPaymentService } from "./payment.service.js";
 import { createPlanService } from "./plan.service.js";
 import { createSubscriptionService } from "./subscription.service.js";
 import { createTaxService } from "./tax.service.js";
@@ -36,7 +39,7 @@ export interface DomainOptions {
 
 /** Builds the catalog, sales and billing services on one database handle. */
 export function createDomainServices(options: DomainOptions) {
-  const { db, auditService, eventBus, timezone, now, logger } = options;
+  const { db, auditService, eventBus, mailer, timezone, now, logger } = options;
   const taxes = createTaxesRepository(db);
   const plans = createPlansRepository(db);
   const catalog = createCatalogRepository(db);
@@ -46,7 +49,7 @@ export function createDomainServices(options: DomainOptions) {
   const catalogService = createCatalogService({ catalog, taxes });
   const discountService = createDiscountService({ discounts: createDiscountsRepository(db), auditService });
 
-  const settings = createSettingsRepository();
+  const settings = createSettingsRepository(db);
   const templates = createTemplatesRepository(db);
   const subscriptions = createSubscriptionsRepository(db);
   const templateService = createTemplateService({ templates, catalog, plans });
@@ -77,6 +80,18 @@ export function createDomainServices(options: DomainOptions) {
     now,
   });
 
+  const payments = createPaymentsRepository(db);
+  const invoiceActionsService = createInvoiceActionsService({
+    invoices,
+    payments,
+    settings,
+    auditService,
+    mailer,
+    timezone,
+    now,
+  });
+  const paymentService = createPaymentService({ payments, invoices, auditService, eventBus });
+
   return {
     taxService,
     planService,
@@ -86,6 +101,8 @@ export function createDomainServices(options: DomainOptions) {
     subscriptionService,
     invoiceService,
     billingService,
+    invoiceActionsService,
+    paymentService,
   };
 }
 
