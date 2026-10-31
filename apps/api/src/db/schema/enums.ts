@@ -6,12 +6,13 @@ export const userRole = pgEnum("user_role", ["admin", "staff", "customer"]);
 
 export const planInterval = pgEnum("plan_interval", ["day", "week", "month", "year"]);
 
-export const discountType = pgEnum("discount_type", ["percentage", "fixed"]);
-export const discountScope = pgEnum("discount_scope", ["order", "product"]);
+export const discountType = pgEnum("discount_type", ["percent", "fixed"]);
+export const discountScope = pgEnum("discount_scope", ["subscription", "product"]);
 
 export const subscriptionStatus = pgEnum("subscription_status", [
   "draft",
   "quotation",
+  "confirmed",
   "active",
   "paused",
   "closed",
@@ -21,7 +22,8 @@ export const subscriptionStatus = pgEnum("subscription_status", [
 export const billingRunMode = pgEnum("billing_run_mode", ["scheduled", "manual"]);
 export const billingRunStatus = pgEnum("billing_run_status", ["running", "completed", "failed"]);
 export const billingRunItemOutcome = pgEnum("billing_run_item_outcome", [
-  "invoiced",
+  "created",
+  "already_billed",
   "skipped",
   "failed",
 ]);

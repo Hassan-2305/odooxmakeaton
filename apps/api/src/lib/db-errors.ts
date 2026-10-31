@@ -21,3 +21,8 @@ export function isUniqueViolation(err: unknown, constraint?: string): boolean {
   const fields = pgFields(err);
   return fields?.code === "23505" && (!constraint || fields.constraint === constraint);
 }
+
+/** True for a check-constraint violation (23514), e.g. an end date before the start date. */
+export function isCheckViolation(err: unknown): boolean {
+  return pgFields(err)?.code === "23514";
+}

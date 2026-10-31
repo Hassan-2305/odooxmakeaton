@@ -36,6 +36,7 @@ export const billingRuns = pgTable(
     triggeredBy: uuid("triggered_by").references(() => users.id, { onDelete: "set null" }),
     consideredCount: integer("considered_count").notNull().default(0),
     invoicedCount: integer("invoiced_count").notNull().default(0),
+    alreadyBilledCount: integer("already_billed_count").notNull().default(0),
     skippedCount: integer("skipped_count").notNull().default(0),
     failedCount: integer("failed_count").notNull().default(0),
     startedAt: utc("started_at").notNull().defaultNow(),
@@ -248,6 +249,8 @@ export const billingRunItems = pgTable(
       .notNull()
       .references(() => subscriptions.id, { onDelete: "cascade" }),
     outcome: billingRunItemOutcome("outcome").notNull(),
+    // The billing period this item is about (null when no period was reached).
+    periodStart: date("period_start", { mode: "string" }),
     reason: text("reason"),
     invoiceId: uuid("invoice_id").references(() => invoices.id, { onDelete: "set null" }),
     retryOf: uuid("retry_of").references((): AnyPgColumn => billingRunItems.id, {
@@ -260,7 +263,7 @@ export const billingRunItems = pgTable(
     index("billing_run_items_subscription_id_idx").on(t.subscriptionId),
     check(
       "billing_run_items_invoice_chk",
-      sql`${t.outcome} <> 'invoiced' or ${t.invoiceId} is not null`,
+      sql`${t.outcome}::text not in ('created', 'already_billed') or ${t.invoiceId} is not null`,
     ),
     check("billing_run_items_retry_chk", sql`${t.retryOf} is null or ${t.retryOf} <> ${t.id}`),
   ],
