@@ -5,7 +5,8 @@ import { createPasswordHasher } from "../lib/password.js";
 import { createCsrf } from "../middleware/csrf.js";
 import { createAuthService } from "../services/auth.service.js";
 import { createHealthService } from "../services/health.service.js";
-import { createFakeAuthStore } from "./fakes.js";
+import { createPasswordResetService } from "../services/password-reset.service.js";
+import { createFakeAuthStore, createFakeClock, createFakeMailer } from "./fakes.js";
 
 export const TEST_SECRET = "test-secret-that-is-at-least-32-characters";
 
@@ -15,11 +16,23 @@ export const testHasher = createPasswordHasher(4);
 /** The real app wired to in-memory repositories. Override any dependency per test. */
 export function createTestApp(overrides: Partial<AppDeps> = {}) {
   const store = createFakeAuthStore();
+  const clock = createFakeClock();
+  const mail = createFakeMailer();
   const authService = createAuthService({
     users: store.usersRepo,
     sessions: store.sessionsRepo,
     hasher: testHasher,
     sessionTtlMs: 7 * 24 * 60 * 60 * 1000,
+    now: clock.now,
+  });
+  const passwordResetService = createPasswordResetService({
+    users: store.usersRepo,
+    resets: store.resetsRepo,
+    hasher: testHasher,
+    mailer: mail.mailer,
+    logger: silentLogger,
+    appUrl: "http://localhost:3000",
+    now: clock.now,
   });
 
   const app = createApp({
@@ -29,9 +42,10 @@ export function createTestApp(overrides: Partial<AppDeps> = {}) {
     csrf: createCsrf(TEST_SECRET, { secure: false }),
     healthService: createHealthService({ ping: async () => {} }),
     authService,
+    passwordResetService,
     authRateLimit: false,
     ...overrides,
   });
 
-  return { app, store, authService };
+  return { app, store, authService, passwordResetService, clock, mail };
 }

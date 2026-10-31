@@ -1,4 +1,13 @@
-import { loginSchema, registerSchema, type LoginInput, type RegisterInput } from "@brightloop/shared";
+import {
+  forgotPasswordSchema,
+  loginSchema,
+  registerSchema,
+  resetPasswordSchema,
+  type ForgotPasswordInput,
+  type LoginInput,
+  type RegisterInput,
+  type ResetPasswordInput,
+} from "@brightloop/shared";
 import { type Request, type RequestHandler, Router } from "express";
 import { rateLimit } from "express-rate-limit";
 import { AppError } from "../lib/errors.js";
@@ -6,6 +15,7 @@ import { clearSessionCookie, currentUser, requireAuth, setSessionCookie } from "
 import type { Csrf } from "../middleware/csrf.js";
 import { validate } from "../middleware/validate.js";
 import type { AuthService, IssuedSession } from "../services/auth.service.js";
+import type { PasswordResetService } from "../services/password-reset.service.js";
 
 export interface AuthRateLimit {
   windowMs: number;
@@ -14,27 +24,40 @@ export interface AuthRateLimit {
 
 interface Deps {
   authService: AuthService;
+  passwordResetService: PasswordResetService;
   csrf: Csrf;
   secureCookies: boolean;
-  /** Per-IP limit on register and login. `false` disables it. */
+  /**
+   * Per-IP limit, counted separately for sign-in (register + login) and for password
+   * reset (forgot + reset). `false` disables it.
+   */
   rateLimit?: AuthRateLimit | false;
 }
 
 const DEFAULT_RATE_LIMIT: AuthRateLimit = { windowMs: 15 * 60 * 1000, limit: 20 };
 
-export function createAuthRouter({ authService, csrf, secureCookies, rateLimit: limits = DEFAULT_RATE_LIMIT }: Deps) {
+export function createAuthRouter({
+  authService,
+  passwordResetService,
+  csrf,
+  secureCookies,
+  rateLimit: limits = DEFAULT_RATE_LIMIT,
+}: Deps) {
   const router = Router();
 
-  const limiter: RequestHandler = limits
-    ? rateLimit({
-        windowMs: limits.windowMs,
-        limit: limits.limit,
-        standardHeaders: "draft-8",
-        legacyHeaders: false,
-        handler: (_req, _res, next) =>
-          next(new AppError(429, "rate_limited", "Too many attempts. Try again in a few minutes.")),
-      })
-    : (_req, _res, next) => next();
+  const makeLimiter = (): RequestHandler =>
+    limits
+      ? rateLimit({
+          windowMs: limits.windowMs,
+          limit: limits.limit,
+          standardHeaders: "draft-8",
+          legacyHeaders: false,
+          handler: (_req, _res, next) =>
+            next(new AppError(429, "rate_limited", "Too many attempts. Try again in a few minutes.")),
+        })
+      : (_req, _res, next) => next();
+  const limiter = makeLimiter();
+  const resetLimiter = makeLimiter();
 
   const meta = (req: Request) => ({ userAgent: req.get("user-agent")?.slice(0, 500), ip: req.ip });
 
@@ -71,6 +94,22 @@ export function createAuthRouter({ authService, csrf, secureCookies, rateLimit: 
 
   router.get("/me", requireAuth, (req, res) => {
     res.json({ user: currentUser(req) });
+  });
+
+  /** Always 200 with the same body, whether or not the email has an account. */
+  router.post("/forgot-password", resetLimiter, validate({ body: forgotPasswordSchema }), async (req, res) => {
+    await passwordResetService.requestReset(req.body as ForgotPasswordInput);
+    res.json({
+      ok: true,
+      message: "If an account exists for that email, we've sent a link to reset the password.",
+    });
+  });
+
+  router.post("/reset-password", resetLimiter, validate({ body: resetPasswordSchema }), async (req, res) => {
+    await passwordResetService.resetPassword(req.body as ResetPasswordInput);
+    // Every session was revoked, including this browser's, if it had one.
+    clearSessionCookie(res, secureCookies);
+    res.json({ ok: true, csrfToken: csrf.issue(res, "anon") });
   });
 
   return router;

@@ -18,6 +18,11 @@ const envSchema = z.object({
   SESSION_TTL_DAYS: z.coerce.number().int().min(1).max(90).default(7),
   /** Number of reverse proxies in front of the API, for client IPs in rate limiting. */
   TRUST_PROXY: z.coerce.number().int().min(0).default(0),
+  /** Public URL of the web app, used in emailed links. */
+  APP_URL: z.string().url().default("http://localhost:3000"),
+  SMTP_HOST: z.string().min(1).default("localhost"),
+  SMTP_PORT: z.coerce.number().int().positive().default(1025),
+  MAIL_FROM: z.string().min(3).default("Brightloop One <no-reply@brightloop.local>"),
 });
 
 export const env = envSchema.parse(process.env);

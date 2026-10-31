@@ -1,12 +1,22 @@
 import { randomUUID } from "node:crypto";
 import type { AuthUser, UserRole } from "@brightloop/shared";
+import type { MailMessage, Mailer } from "../lib/mailer.js";
+import type { PasswordResetsRepository } from "../repositories/password-resets.repository.js";
 import type { NewSession, SessionsRepository } from "../repositories/sessions.repository.js";
 import type { UsersRepository, UserWithPassword } from "../repositories/users.repository.js";
 
-/** In-memory stand-ins for the users and sessions repositories. */
+interface FakeReset {
+  userId: string;
+  tokenHash: string;
+  expiresAt: Date;
+  usedAt: Date | null;
+}
+
+/** In-memory stand-ins for the users, sessions and password reset repositories. */
 export function createFakeAuthStore() {
   const users = new Map<string, UserWithPassword>();
   const sessions = new Map<string, NewSession>();
+  const resets: FakeReset[] = [];
   /** Set to make the next createCustomerUser fail like a concurrent duplicate insert. */
   let failNextCreateWithUniqueViolation = false;
 
@@ -53,11 +63,30 @@ export function createFakeAuthStore() {
     },
   };
 
+  // Same rules as the SQL: single use, unexpired, and a new request voids older tokens.
+  const resetsRepo: Pick<PasswordResetsRepository, "create" | "consumeAndSetPassword"> = {
+    async create(input, now = new Date()) {
+      for (const r of resets) if (r.userId === input.userId && !r.usedAt) r.usedAt = now;
+      resets.push({ ...input, usedAt: null });
+    },
+    async consumeAndSetPassword(tokenHash, passwordHash, now = new Date()) {
+      const reset = resets.find((r) => r.tokenHash === tokenHash && !r.usedAt && r.expiresAt > now);
+      if (!reset) return undefined;
+      reset.usedAt = now;
+      const user = users.get(reset.userId);
+      if (user) user.passwordHash = passwordHash;
+      for (const [id, s] of sessions) if (s.userId === reset.userId) sessions.delete(id);
+      return reset.userId;
+    },
+  };
+
   return {
     users,
     sessions,
+    resets,
     usersRepo,
     sessionsRepo,
+    resetsRepo,
     failNextCreate() {
       failNextCreateWithUniqueViolation = true;
     },
@@ -81,4 +110,26 @@ export function createFakeAuthStore() {
 
 function toAuthUser({ id, email, name, role, customerId }: UserWithPassword): AuthUser {
   return { id, email, name, role, customerId };
+}
+
+/** Captures sent mail instead of delivering it. */
+export function createFakeMailer() {
+  const sent: MailMessage[] = [];
+  const mailer: Mailer = {
+    async send(message) {
+      sent.push(message);
+    },
+  };
+  return { mailer, sent };
+}
+
+/** A clock tests can move forward. */
+export function createFakeClock(start = new Date("2026-11-01T10:00:00Z")) {
+  let current = start.getTime();
+  return {
+    now: () => new Date(current),
+    advance(ms: number) {
+      current += ms;
+    },
+  };
 }

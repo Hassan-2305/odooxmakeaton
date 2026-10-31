@@ -3,6 +3,7 @@ import type { EventBus } from "../lib/events.js";
 import type { Csrf } from "../middleware/csrf.js";
 import type { AuthService } from "../services/auth.service.js";
 import type { HealthService } from "../services/health.service.js";
+import type { PasswordResetService } from "../services/password-reset.service.js";
 import { type AuthRateLimit, createAuthRouter } from "./auth.routes.js";
 import { createEventsRouter } from "./events.routes.js";
 import { createHealthRouter } from "./health.routes.js";
@@ -10,6 +11,7 @@ import { createHealthRouter } from "./health.routes.js";
 export interface RouteDeps {
   healthService: HealthService;
   authService: AuthService;
+  passwordResetService: PasswordResetService;
   eventBus: EventBus;
   csrf: Csrf;
   secureCookies: boolean;
@@ -28,6 +30,7 @@ export function createApiRouter(deps: RouteDeps) {
     "/auth",
     createAuthRouter({
       authService: deps.authService,
+      passwordResetService: deps.passwordResetService,
       csrf: deps.csrf,
       secureCookies: deps.secureCookies,
       rateLimit: deps.authRateLimit,
