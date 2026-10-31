@@ -18,6 +18,7 @@ import { createUsersRepository } from "./repositories/users.repository.js";
 import { createAuthService } from "./services/auth.service.js";
 import { createAuditService } from "./services/audit.service.js";
 import { createCustomersService } from "./services/customers.service.js";
+import { createDomainServices } from "./services/domain.js";
 import { createHealthService } from "./services/health.service.js";
 import { createIntegrityService } from "./services/integrity.service.js";
 import { createPasswordResetService } from "./services/password-reset.service.js";
@@ -28,6 +29,8 @@ import { createStaffService } from "./services/staff.service.js";
 const secureCookies = env.NODE_ENV === "production";
 const users = createUsersRepository(db);
 const hasher = createPasswordHasher(12);
+const mailer = createSmtpMailer({ host: env.SMTP_HOST, port: env.SMTP_PORT, from: env.MAIL_FROM });
+const auditService = createAuditService({ repo: createAuditRepository(db), timezone: env.BUSINESS_TZ });
 
 const app = createApp({
   logger: consoleLogger,
@@ -46,16 +49,24 @@ const app = createApp({
     users,
     resets: createPasswordResetsRepository(db),
     hasher,
-    mailer: createSmtpMailer({ host: env.SMTP_HOST, port: env.SMTP_PORT, from: env.MAIL_FROM }),
+    mailer,
     logger: consoleLogger,
     appUrl: env.APP_URL,
   }),
   staffService: createStaffService({ users, hasher }),
   customersService: createCustomersService({ customers: createCustomersRepository(db) }),
-  auditService: createAuditService({ repo: createAuditRepository(db), timezone: env.BUSINESS_TZ }),
+  auditService,
   integrityService: createIntegrityService({ repo: createIntegrityRepository(db), timezone: env.BUSINESS_TZ }),
   portalService: createPortalService({ repo: createPortalRepository(db) }),
   reportsService: createReportsService({ repo: createReportsRepository(db), timezone: env.BUSINESS_TZ }),
+  domain: createDomainServices({
+    db,
+    auditService,
+    eventBus,
+    mailer,
+    timezone: env.BUSINESS_TZ,
+    logger: consoleLogger,
+  }),
 });
 
 const server = app.listen(env.PORT, () => {

@@ -14,6 +14,18 @@ export const PLAN_INTERVALS = ["day", "week", "month", "year"] as const;
 export const planIntervalSchema = z.enum(PLAN_INTERVALS);
 export type PlanInterval = z.infer<typeof planIntervalSchema>;
 
+/** Odoo-style names accepted on input and stored as the short form. */
+const PLAN_INTERVAL_ALIASES: Record<string, PlanInterval> = {
+  daily: "day",
+  weekly: "week",
+  monthly: "month",
+  yearly: "year",
+};
+export const planIntervalInputSchema = z.preprocess(
+  (value) => (typeof value === "string" ? (PLAN_INTERVAL_ALIASES[value] ?? value) : value),
+  planIntervalSchema,
+);
+
 export const DISCOUNT_TYPES = ["percentage", "fixed"] as const;
 export const discountTypeSchema = z.enum(DISCOUNT_TYPES);
 export type DiscountType = z.infer<typeof discountTypeSchema>;

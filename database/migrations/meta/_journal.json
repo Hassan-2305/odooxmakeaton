@@ -15,6 +15,13 @@
       "when": 1793428238774,
       "tag": "0001_sessions",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1793431568604,
+      "tag": "0002_catalog_taxes_plans",
+      "breakpoints": true
     }
   ]
 }

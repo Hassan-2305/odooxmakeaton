@@ -11,7 +11,8 @@ import {
   quantitySchema,
   toPatchSchema,
 } from "./common.js";
-import { discountScopeSchema, discountTypeSchema, planIntervalSchema } from "./enums.js";
+import { discountScopeSchema, discountTypeSchema, planIntervalInputSchema } from "./enums.js";
+import { createListQuerySchema } from "./list-query.js";
 
 const skuSchema = z.string().trim().min(1).max(64).optional();
 
@@ -21,8 +22,15 @@ export const createProductSchema = z.object({
   name: nameSchema,
   description: optionalTextSchema,
   sku: skuSchema,
+  /** Sales price in paise. Variant price = this + the price extras of its attribute values. */
   basePricePaise: paiseSchema,
   isActive: z.boolean().default(true),
+  /** Default taxes, copied onto subscription lines for this product. */
+  taxIds: z
+    .array(idSchema)
+    .max(10)
+    .default([])
+    .refine((ids) => new Set(ids).size === ids.length, "Taxes must not repeat"),
 });
 export type CreateProductInput = z.infer<typeof createProductSchema>;
 
@@ -73,6 +81,10 @@ export type CreateVariantInput = z.infer<typeof createVariantSchema>;
 export const updateVariantSchema = toPatchSchema(createVariantSchema);
 export type UpdateVariantInput = z.infer<typeof updateVariantSchema>;
 
+/** POST /api/variants: the product id travels in the body. */
+export const createVariantWithProductSchema = createVariantSchema.extend({ productId: idSchema });
+export type CreateVariantWithProductInput = z.infer<typeof createVariantWithProductSchema>;
+
 // Taxes
 
 const taxFields = z.object({
@@ -80,7 +92,9 @@ const taxFields = z.object({
   rateBps: bpsSchema,
   inclusive: z.boolean().default(false),
   effectiveFrom: isoDateSchema,
+  /** Last day the rate applies (inclusive). */
   effectiveTo: isoDateSchema.nullish(),
+  isActive: z.boolean().default(true),
 });
 
 export const createTaxSchema = taxFields.superRefine((tax, ctx) =>
@@ -96,7 +110,10 @@ export type UpdateTaxInput = z.infer<typeof updateTaxSchema>;
 
 const planFields = z.object({
   name: nameSchema,
-  interval: planIntervalSchema,
+  /** List price per billing period, in paise. */
+  pricePaise: paiseSchema.default(0),
+  /** day|week|month|year; daily|weekly|monthly|yearly are accepted too. */
+  interval: planIntervalInputSchema,
   intervalCount: z.number().int().min(1).max(36).default(1),
   minQuantity: quantitySchema.default(1),
   availableFrom: isoDateSchema.nullish(),
@@ -163,3 +180,127 @@ export type CreateDiscountRuleInput = z.infer<typeof createDiscountRuleSchema>;
 export const updateDiscountRuleSchema = toPatchSchema(discountRuleFields)
   .superRefine(checkDiscountRule);
 export type UpdateDiscountRuleInput = z.infer<typeof updateDiscountRuleSchema>;
+
+// List queries
+
+const booleanQuery = z.enum(["true", "false"]).transform((v) => v === "true");
+const searchQuery = z.string().trim().min(1).max(100);
+
+export const productListQuerySchema = createListQuerySchema({
+  sortFields: ["name", "basePricePaise", "createdAt"],
+  defaultSort: [{ field: "name", direction: "asc" }],
+  filters: { q: searchQuery.optional(), isActive: booleanQuery.optional() },
+});
+export type ProductListQuery = z.infer<typeof productListQuerySchema>;
+
+export const variantListQuerySchema = createListQuerySchema({
+  sortFields: ["name", "createdAt"],
+  defaultSort: [{ field: "name", direction: "asc" }],
+  filters: { productId: idSchema.optional(), q: searchQuery.optional(), isActive: booleanQuery.optional() },
+});
+export type VariantListQuery = z.infer<typeof variantListQuerySchema>;
+
+export const taxListQuerySchema = createListQuerySchema({
+  sortFields: ["name", "rateBps", "effectiveFrom", "createdAt"],
+  defaultSort: [{ field: "name", direction: "asc" }],
+  filters: {
+    isActive: booleanQuery.optional(),
+    /** Only taxes in effect on this date. */
+    effectiveOn: isoDateSchema.optional(),
+  },
+});
+export type TaxListQuery = z.infer<typeof taxListQuerySchema>;
+
+export const planListQuerySchema = createListQuerySchema({
+  sortFields: ["name", "pricePaise", "createdAt"],
+  defaultSort: [{ field: "name", direction: "asc" }],
+  filters: {
+    q: searchQuery.optional(),
+    isActive: booleanQuery.optional(),
+    /** Only plans that can be sold on this date. */
+    sellableOn: isoDateSchema.optional(),
+  },
+});
+export type PlanListQuery = z.infer<typeof planListQuerySchema>;
+
+// Responses
+
+export interface AttributeValue {
+  id: string;
+  attributeId: string;
+  value: string;
+  priceExtraPaise: number;
+}
+
+export interface Attribute {
+  id: string;
+  /** null for global attributes offered to every product. */
+  productId: string | null;
+  name: string;
+  values: AttributeValue[];
+}
+
+export interface Product {
+  id: string;
+  name: string;
+  description: string | null;
+  sku: string | null;
+  currency: "INR";
+  basePricePaise: number;
+  isActive: boolean;
+  taxIds: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Variant {
+  id: string;
+  productId: string;
+  productName: string;
+  name: string;
+  sku: string | null;
+  isActive: boolean;
+  /** Computed server-side: product base price + sum of attribute value price extras. */
+  pricePaise: number;
+  attributeValues: (AttributeValue & { attributeName: string })[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Tax {
+  id: string;
+  name: string;
+  rateBps: number;
+  inclusive: boolean;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Plan {
+  id: string;
+  name: string;
+  pricePaise: number;
+  interval: "day" | "week" | "month" | "year";
+  intervalCount: number;
+  minQuantity: number;
+  availableFrom: string | null;
+  availableTo: string | null;
+  autoCloseOnEnd: boolean;
+  closableEarly: boolean;
+  pausable: boolean;
+  renewable: boolean;
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Route params
+
+export const attributeParamsSchema = z.object({ id: idSchema, attributeId: idSchema });
+export type AttributeParams = z.infer<typeof attributeParamsSchema>;
+
+export const attributeValueParamsSchema = attributeParamsSchema.extend({ valueId: idSchema });
+export type AttributeValueParams = z.infer<typeof attributeValueParamsSchema>;
