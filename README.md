@@ -91,10 +91,11 @@ Hosting), one partly paid invoice that is not yet due, and one overdue invoice.
 **Planted faults** (`--with-faults`), each detected by an existing integrity rule:
 
 - `missing_invoice`: an active Starter ERP subscription that started 10 days ago and was never billed.
-- `duplicate_invoice`: a second confirmed copy of a paid invoice for the same subscription
-  period. The schema's `invoices_subscription_period_unique` constraint makes this
-  impossible, so the script **drops that constraint in the demo database** to plant it.
-  The next run of `db:seed:demo` (with `--reset`) restores the constraint.
+- `duplicate_invoice`: a second confirmed invoice for the same subscription as a paid
+  invoice, with its period starting one day later and ending on the same day. It goes in
+  through the normal invoice path, which `invoices_subscription_period_unique` allows
+  because the period starts differ; the scan flags it because the two periods overlap.
+  The constraint is never altered: the script refuses to run if it is missing.
 - `unallocated_payment`: a ₹5,000 bank transfer with no allocation.
 
 **Docker:** set `SEED_DEMO=true` (e.g. `SEED_DEMO=true docker compose up --build`) and the
